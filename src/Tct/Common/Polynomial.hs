@@ -17,6 +17,7 @@ For constructing polynomials a view 'PolynomialView' is provided.
 A view is not as restrictive but does not support any arithmetical operations.
 Use 'fromView' or 'fromViewWith' to construct a 'Polynomial'.
 
+TODO: Ord instance max/min ?
 -}
 module Tct.Common.Polynomial
   (
@@ -24,10 +25,12 @@ module Tct.Common.Polynomial
   Monomial
   , Polynomial
   , degree
+  , isLinear
   , isStronglyLinear
   , coefficients
   , constantValue
   , substituteVars
+  , mapCoefficients
   -- * View
   , MonomialView (..)
   , PolynomialView (..)
@@ -151,13 +154,16 @@ substituteVars (Poly ts) subs = pbigAdd $ foldl' handleTerms [] (M.toList ts)
 degree :: Ord v => Polynomial c v -> Int
 degree (Poly ms) = maximum (map mdegree $ M.keys ms)
 
--- prop> all (==one) . coefficients.
-isStronglyLinear :: (SemiRing c, Eq c, Ord v) =>  Polynomial c v -> Bool
-isStronglyLinear = all (==one) . coefficients
+isLinear :: Polynomial c v -> Bool
+isLinear (Poly ms) = all (\(Mono m) -> M.size m <= 1) (M.keys ms)
 
+isStronglyLinear :: (SemiRing c, Eq c, Ord v) =>  Polynomial c v -> Bool
+isStronglyLinear (Poly ms) = all k (M.toList ms)
+  where k (Mono m, c) = let sz = M.size m in sz == 1 || (sz == 1 && c == one)
+ 
 -- | Returns the coefficients of the polynomial.
 coefficients :: Ord v => Polynomial c v -> [c]
-coefficients (Poly ts) = M.elems $ M.delete mone ts
+coefficients (Poly ts) = M.elems ts
 
 -- | Returns the constant value of the polynomial.
 constantValue :: (Ord v, SemiRing c) => Polynomial c v -> c
@@ -210,6 +216,8 @@ pfromViewWithM f (PolyV ts) = Poly `liftM` foldM k M.empty ts where
       then M.insertWith add m c' p
       else p
 
+mapCoefficients :: (Additive c', Eq c') => (c -> c') -> Polynomial c v -> Polynomial c' v
+mapCoefficients f (Poly ms) = pnormalise $ Poly $ f `M.map` ms
 
 -- | Lifts a constant to a polynom.
 constantv :: c -> PolynomialView c v
