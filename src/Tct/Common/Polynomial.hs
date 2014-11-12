@@ -28,6 +28,7 @@ module Tct.Common.Polynomial
   , isLinear
   , isStronglyLinear
   , coefficients
+  , variables
   , constantValue
   , substituteVars
   , mapCoefficients
@@ -51,7 +52,7 @@ module Tct.Common.Polynomial
   where
 
 
-import Data.List (foldl')
+import Data.List (foldl', nub)
 import Data.Maybe (fromMaybe)
 import Control.Monad
 import qualified Data.Map.Strict   as M
@@ -164,6 +165,10 @@ isStronglyLinear (Poly ms) = all k (M.toList ms)
 -- | Returns the coefficients of the polynomial.
 coefficients :: Ord v => Polynomial c v -> [c]
 coefficients (Poly ts) = M.elems ts
+
+variables :: Eq v => Polynomial c v -> [v]
+variables (Poly ms) = nub $ concatMap k (M.keys ms)
+  where k (Mono m) = M.keys m
 
 -- | Returns the constant value of the polynomial.
 constantValue :: (Ord v, SemiRing c) => Polynomial c v -> c

@@ -16,7 +16,6 @@ module Tct.Common.PolynomialInterpretation
 
 import qualified Data.Map as M
 import Data.Data (Typeable)
-import Data.Maybe (fromMaybe)
 
 import qualified Tct.Core.Common.Pretty as PP
 import qualified Tct.Core.Common.Parser as P
@@ -118,6 +117,8 @@ instance PP.Pretty fun => PP.Pretty (Kind fun) where
   pretty (ConstructorBased shp _) = PP.text "constructor-based" PP.<> PP.parens (PP.pretty shp)
 
 instance PP.Pretty fun => PP.Pretty (PolyInter fun Int) where
-  pretty pint = PP.vcat $ map PP.pretty (M.elems $ interpretations pint)
-
+  pretty pint = PP.table [(PP.AlignRight, as), (PP.AlignLeft, bs), (PP.AlignLeft,cs)]
+    where 
+      (as,bs,cs) = unzip3 $ map k (M.toList $ interpretations pint)
+      k (f,p)    = (PP.pretty f PP.<> PP.tupled (map PP.pretty (P.variables p)), PP.text " = ", PP.pretty p)
 
