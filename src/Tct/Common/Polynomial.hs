@@ -1,99 +1,118 @@
 {- | This module provides a tree-based implementation for multivariate polynomials.
 
-All operations on 'Monomial' fulfill following invariants:
+A 'Monomial' is well-defined if:
 
     * each variable (indeterminate) occurs at most once
     * exponents are >= 1
 
-All operations on 'Polynomial' fulfill following invariants:
+A 'Polynomial' is well-defined if:
 
     * monomials are valid
     * monomials are unique
     * coefficients are non-zero wrt. 'zero'
 
-Basic operations are defined via 'SemiRing' ('Ring') class.
 
-For constructing polynomials a view 'PolynomialView' is provided.
-A view is not as restrictive but does not support any arithmetical operations.
-Use 'fromView' or 'fromViewWith' to construct a 'Polynomial'.
+All operations on 'Polynomial' are invariant wrt to well-definedness.
 
-TODO: Ord instance max/min ?
+Polynomials can be constructed using the 'constant' and 'variable' functions together with
+standard arithmetic ('SemiRing', 'Ring'); or
+using 'PolynomialView', together with 'fromView'.
+
+
+NOTE: 'Ord' and 'Eq' are derived for the 'Polynomial' and 'Monomial' type.
+They are purely syntactical and shouldn't be used to eg compare polynomials.
 -}
 module Tct.Common.Polynomial
   (
   -- * Polynomial
   Monomial
   , Polynomial
-  , degree
-  , isLinear
-  , isStronglyLinear
+  , scale
+  -- ** Getters
   , coefficients
   , variables
   , constantValue
-  , substituteVars
+  -- ** Properties
+  , degree
+  , isLinear
+  , isStronglyLinear
+  -- ** Substitution/Maps
   , mapCoefficients
+  , substituteVariables
+
   -- * View
   , MonomialView (..)
   , PolynomialView (..)
-  , mfromView
-  , pfromView
-  , pfromViewWith
-  , pfromViewWithM
+  -- ** view constructors
   , (^^^), monov, polyv
-  , constant
-  , variable
   , linear
   , quadratic
   , mixed
-  -- * Pretty Printing
-  , ppMonomial
-  , ppPolynomial
-  )
-  where
+
+  -- ** polynomial construction
+  , constant
+  , variable
+  , fromView
+  , fromViewWith
+  , fromViewWithM
+  ) where
 
 
-import Data.List (foldl', nub)
-import Data.Maybe (fromMaybe)
-import Control.Monad
-import qualified Data.Map.Strict   as M
+import           Control.Monad
+import           Data.List              (foldl', nub)
+import qualified Data.Map.Strict        as M
+import           Data.Maybe             (fromMaybe)
 
 import qualified Tct.Core.Common.Pretty as PP
 
 import           Tct.Common.Ring
 
 
+-- the zero polynomial is represented by (Poly M.empty)
+-- a constant v is represented by (Poly (M.singleton (Mono M.empty) c))
+
 -- | The abstract monomial type.
 newtype Monomial v = Mono (M.Map v Int)
   deriving (Eq, Ord, Show)
 
-mmult :: Ord v => Monomial v -> Monomial v -> Monomial v
-mmult (Mono ps1) (Mono ps2) = Mono $ M.unionWith (+) ps1 ps2
+-- we treat negative exponents as 1
+mpower :: v -> Int -> Monomial v
+mpower v i
+  | i <= 0    = Mono (M.singleton v 1)
+  | otherwise = Mono (M.singleton v i)
+
+mvariable :: v -> Monomial v
+mvariable = flip mpower 1
+
 
 mone :: Monomial v
 mone = Mono M.empty
 
-mdegree :: Monomial v -> Int
-mdegree (Mono ps)
-  | M.null ps = -1
-  | otherwise = maximum $ M.elems ps
+mmult :: Ord v => Monomial v -> Monomial v -> Monomial v
+mmult (Mono ps1) (Mono ps2) = Mono $ M.unionWith (+) ps1 ps2
 
 instance Ord v => Multiplicative (Monomial v) where
   one = mone
   mul = mmult
 
 
--- | The abstract polynom type.
+-- | The abstract polynomial type.
 newtype Polynomial c v = Poly (M.Map (Monomial v) c)
   deriving (Eq, Ord, Show)
 
+-- | Constructs a polynomial from a constant value.
+constant :: (Additive c, Eq c, Ord v) => c -> Polynomial c v
+constant c
+  | c == zero = pzero
+  | otherwise = Poly (M.singleton mone c)
+
+-- | Constructs a polynomial from a variable (with exponent 1).
+variable :: (Multiplicative c, Ord v) => v -> Polynomial c v
+variable v = Poly (M.singleton (mvariable v) one)
+
+
 pnormalise :: (Additive c, Eq c) => Polynomial c v -> Polynomial c v
 pnormalise (Poly ts) = Poly $ M.filter (/= zero) ts
-
-asConstant :: (SemiRing c, Eq v) => Polynomial c v -> Maybe c
-asConstant (Poly ts) = case M.toList ts of
-  []                  -> Just zero
-  [(m,c)] | m == mone -> Just c
-  _                   -> Nothing
 
 pzero :: Polynomial c v
 pzero = Poly M.empty
@@ -105,17 +124,30 @@ instance (Additive c, Eq c, Ord v) => Additive (Polynomial c v) where
   zero = pzero
   add  = padd
 
-pone :: Multiplicative c => Polynomial c v
-pone = Poly $ M.singleton mone one
 
-pscale :: SemiRing c => c -> Polynomial c v -> Polynomial c v
-pscale c (Poly ts) = Poly $ M.map (`mul` c) ts
+asConstant :: (SemiRing c, Eq v) => Polynomial c v -> Maybe c
+asConstant (Poly ts)
+  | M.size ts > 1 = Nothing
+  | otherwise     = case M.toList ts of
+    []                  -> Just zero
+    [(m,c)] | m == mone -> Just c
+    _                   -> Nothing
+
+pone :: (Multiplicative c, Ord v) => Polynomial c v
+pone = Poly (M.singleton mone one)
+
+-- | Multiplies a constant value with a polynomial.
+scale :: (SemiRing c, Eq c) => c -> Polynomial c v -> Polynomial c v
+scale c (Poly ts)
+  | c == zero = pzero
+  | otherwise = Poly $ M.map (`mul` c) ts
 
 pmult :: (SemiRing c, Eq c, Ord v) => Polynomial c v -> Polynomial c v -> Polynomial c v
-pmult p1@(Poly ts1) p2@(Poly ts2) = pnormalise $ case (asConstant p1, asConstant p2) of
-  (Just c, _) -> pscale c p2
-  (_, Just c) -> pscale c p1
-  _           ->
+pmult p1@(Poly ts1) p2@(Poly ts2) = case (asConstant p1, asConstant p2) of
+  (Just c1, Just c2) -> constant (c1 `mul` c2)
+  (Just c, _)        -> scale c p2
+  (_, Just c)        -> scale c p1
+  _                  ->
     Poly $ M.fromListWith add
       [ (m1 `mmult` m2, c1 `mul` c2) | (m1,c1) <- M.toList ts1, (m2,c2) <- M.toList ts2 ]
 
@@ -124,10 +156,69 @@ instance (SemiRing c, Eq c, Ord v) => Multiplicative (Polynomial c v) where
   mul = pmult
 
 pnegate :: AdditiveGroup c => Polynomial c v -> Polynomial c v
-pnegate (Poly ms) = Poly $ M.map neg ms
+pnegate (Poly ts) = Poly (M.map neg ts)
 
 instance (AdditiveGroup c, Eq c, Ord v) => AdditiveGroup (Polynomial c v) where
   neg = pnegate
+
+
+--- * Getters --------------------------------------------------------------------------------------------------------
+
+-- | Returns the coefficients of the polynomial (in arbitrary order). Never returns an empty list.
+--
+-- prop> coefficients (constant zero) = [zero]
+coefficients :: (SemiRing c, Ord v) => Polynomial c v -> [c]
+coefficients p@(Poly ts)
+  | isZero p  = [zero]
+  | otherwise = M.elems ts
+
+-- | Returns the (set of) variables of the polynomial (in arbitrary order).
+--
+-- prop> variables (constant v) = []
+variables :: Eq v => Polynomial c v -> [v]
+variables (Poly ts) = nub $ concatMap k (M.keys ts)
+  where k (Mono ps) = M.keys ps
+
+-- | Returns the constant value of the polynomial.
+--
+-- prop> constantValue zero = zero
+-- prop> constantValue (constant v) = v
+constantValue :: (SemiRing c, Ord v) => Polynomial c v -> c
+constantValue (Poly ts) = zero `fromMaybe` M.lookup mone ts
+
+
+
+--- * Properties -----------------------------------------------------------------------------------------------------
+
+isZero :: Polynomial c v -> Bool
+isZero (Poly ts) = M.null ts
+
+mdegree :: Monomial v -> Int
+mdegree (Mono ps) = sum (M.elems ps)
+
+-- | Returns the degree of the polynomial.
+--
+-- prop> degree zero = -1
+-- prop> degree (constant v) = 0
+degree :: (Additive c, Eq c, Ord v) => Polynomial c v -> Int
+degree p@(Poly ts)
+  | isZero p  = -1
+  | otherwise = maximum (map mdegree $ M.keys ts)
+
+misLinear :: Monomial v -> Bool
+misLinear m = mdegree m <= 1
+
+-- | Checks if the polynomial is linear.
+isLinear :: Polynomial c v -> Bool
+isLinear (Poly ts) = all misLinear (M.keys ts)
+
+-- | Checks if the polynomial is strongly linear.
+isStronglyLinear :: (SemiRing c, Eq c, Ord v) =>  Polynomial c v -> Bool
+isStronglyLinear (Poly ts) = all k (M.toList ts)
+  where
+    k (m, c)
+      | m == mone = True
+      | otherwise = c == one && misLinear m
 
 
 pbigMult :: (SemiRing c, Eq c, Ord v) => [Polynomial c v] -> Polynomial c v
@@ -136,12 +227,12 @@ pbigMult = foldl' pmult pone
 pbigAdd :: (SemiRing c, Eq c, Ord v) => [Polynomial c v] -> Polynomial c v
 pbigAdd = foldl' padd pzero
 
--- | @'substituteVars' p subs@ substitutes the variables in p according to @subs@.
+-- | @'substituteVariables' p subs@ substitutes the variables in p according to @subs@.
 -- Variables occuring not in @subs@ are mapped to the unit ('one') polynomial.
-substituteVars :: (SemiRing c, Eq c, Ord v, Ord v') => Polynomial c v -> M.Map v (Polynomial c v') -> Polynomial c v'
-substituteVars (Poly ts) subs = pbigAdd $ foldl' handleTerms [] (M.toList ts)
-  where 
-    handleTerms polys (m,c) = (c `pscale` handleMono m) : polys
+substituteVariables :: (SemiRing c, Eq c, Ord v, Ord v') => Polynomial c v -> M.Map v (Polynomial c v') -> Polynomial c v'
+substituteVariables (Poly ts) subs = pbigAdd $ foldl' handleTerms [] (M.toList ts)
+  where
+    handleTerms polys (m,c) = (c `scale` handleMono m) : polys
     subs' = M.toList subs
     handleMono (Mono ps) = pbigMult $ foldl' k [] subs'
       where
@@ -149,34 +240,12 @@ substituteVars (Poly ts) subs = pbigAdd $ foldl' handleTerms [] (M.toList ts)
           Just i  -> polys ++ replicate i p
           Nothing -> polys
 
--- | Returns the degree of the polynomial.
---
--- prop> degree zero = -1
-degree :: Ord v => Polynomial c v -> Int
-degree (Poly ms) = maximum (map mdegree $ M.keys ms)
-
-isLinear :: Polynomial c v -> Bool
-isLinear (Poly ms) = all (\(Mono m) -> M.size m <= 1) (M.keys ms)
-
-isStronglyLinear :: (SemiRing c, Eq c, Ord v) =>  Polynomial c v -> Bool
-isStronglyLinear (Poly ms) = all k (M.toList ms)
-  where k (Mono m, c) = let sz = M.size m in sz == 1 || (sz == 1 && c == one)
- 
--- | Returns the coefficients of the polynomial.
-coefficients :: Ord v => Polynomial c v -> [c]
-coefficients (Poly ts) = M.elems ts
-
-variables :: Eq v => Polynomial c v -> [v]
-variables (Poly ms) = nub $ concatMap k (M.keys ms)
-  where k (Mono m) = M.keys m
-
--- | Returns the constant value of the polynomial.
-constantValue :: (Ord v, SemiRing c) => Polynomial c v -> c
-constantValue (Poly ts) = fromMaybe zero (M.lookup mone ts)
+-- | Maps over the coefficients.
+mapCoefficients :: (Additive c', Eq c') => (c -> c') -> Polynomial c v -> Polynomial c' v
+mapCoefficients f (Poly ts) = pnormalise $ Poly (f `M.map` ts)
 
 
 --- * View -----------------------------------------------------------------------------------------------------------
-
 
 -- | Power type with variable @v@.
 data PowerView v         = PowV v Int deriving (Eq, Ord, Show)
@@ -185,7 +254,7 @@ data MonomialView v      = MonoV [PowerView v] deriving (Eq, Ord, Show)
 -- | Polynomial type with coefficient @c@ and variable @v@.
 newtype PolynomialView c v = PolyV [(c,Monomial v)] deriving (Eq, Ord, Show)
 
--- | prop> v^^^1 = PowV v i
+-- | > v^^^1 = PowV v i
 (^^^) :: v -> Int -> PowerView v
 v^^^i = PowV v i
 
@@ -197,47 +266,40 @@ monov = MonoV
 polyv :: [(c,Monomial v)] -> PolynomialView c v
 polyv = PolyV
 
-mfromView :: Ord v => MonomialView v -> Monomial v
-mfromView (MonoV ps) = Mono $ foldl' k M.empty ps
-  where k m (PowV v i) = if i >0 then M.insertWith (+) v i m else m
-
 
 -- | Like 'fromViewWith' with the identity function applied.
 --
--- prop> fromView = fromViewWith id id
-pfromView :: (Additive c, Eq c, Ord v) => PolynomialView c v -> Polynomial c v
-pfromView = pfromViewWith id
+-- prop> fromView = fromViewWith id
+fromView :: (Additive c, Eq c, Ord v) => PolynomialView c v -> Polynomial c v
+fromView = fromViewWith id
 
-pfromViewWith :: (Additive c', Eq c', Ord v) => (c -> c') -> PolynomialView c v -> Polynomial c' v
-pfromViewWith f (PolyV ts) = Poly $ foldl' k M.empty ts where
+-- | 'fromViewWith f p' applies @f@ to all coefficients and constructs a polynomial from a view.
+fromViewWith :: (Additive c', Eq c', Ord v) => (c -> c') -> PolynomialView c v -> Polynomial c' v
+fromViewWith f (PolyV ts) = Poly $ foldl' k M.empty ts where
   k p (c, m) = let c' = f c in
     if c' /= zero then M.insertWith add m c' p else p
 
-pfromViewWithM :: (Monad m, Additive c', Eq c', Ord v) => (c -> m c') -> PolynomialView c v -> m (Polynomial c' v)
-pfromViewWithM f (PolyV ts) = Poly `liftM` foldM k M.empty ts where
+-- | Monadic version of 'fromViewWith'.
+fromViewWithM :: (Monad m, Additive c', Eq c', Ord v) => (c -> m c') -> PolynomialView c v -> m (Polynomial c' v)
+fromViewWithM f (PolyV ts) = Poly `liftM` foldM k M.empty ts where
   k p (c,m) = do
     c' <- f c
     return $ if c' /= zero
       then M.insertWith add m c' p
       else p
 
-mapCoefficients :: (Additive c', Eq c') => (c -> c') -> Polynomial c v -> Polynomial c' v
-mapCoefficients f (Poly ms) = pnormalise $ Poly $ f `M.map` ms
 
 -- | Lifts a constant to a polynom.
-constantv :: c -> PolynomialView c v
-constantv c = PolyV [(c,mone)]
+--constantv :: c -> PolynomialView c v
+--constantv c = PolyV [(c,mone)]
 
 -- | Lifts a variable to a polynom (with exponent 1).
-variablev :: Multiplicative c => v -> PolynomialView c v
-variablev v = PolyV [(one, Mono $ M.singleton v 1)]
+--variablev :: Multiplicative c => v -> PolynomialView c v
+--variablev v = PolyV [(one, Mono $ M.singleton v 1)]
 
-constant :: (Additive c, Eq c, Ord v) => c -> Polynomial c v
-constant = pfromView . constantv
-
-variable :: (SemiRing c, Eq c, Ord v) => v -> Polynomial c v 
-variable = pfromView . variablev
-
+mfromView :: Ord v => MonomialView v -> Monomial v
+mfromView (MonoV ps) = Mono $ foldl' k M.empty ps
+  where k m (PowV v i) = if i > 0 then M.insertWith (+) v i m else m
 
 -- | @'linear' f [x,...,z] = cx*x + ... + cz*z + c@
 -- constructs a linear polynomial; the coefficients are determinded by applying @f@ to each monomial.
@@ -264,31 +326,26 @@ mixed d f vs =  polyv $ map mkTerm pows
       . sequence $ replicate (length vs) [0..d]
 
 
---- * Pretty ---------------------------------------------------------------------------------------------------------
+--- * Pretty Printing ------------------------------------------------------------------------------------------------
 instance PP.Pretty v => PP.Pretty (Monomial v) where
   pretty = ppMonomial PP.pretty
 
 instance (Multiplicative c, Eq c, PP.Pretty c, PP.Pretty v) => PP.Pretty (Polynomial c v) where
   pretty = ppPolynomial PP.pretty PP.pretty
 
-
--- | Pretty printing function for 'Monomial'.
--- Should be used for basic types that do not provide the 'Pretty' instance.
 ppMonomial :: (v -> PP.Doc) -> Monomial v -> PP.Doc
 ppMonomial pp (Mono ps)
   | M.null ps = PP.empty
   | otherwise = PP.hcat . PP.punctuate (PP.char '*') . map k $ M.toAscList ps
     where k (v,i) = pp v PP.<> if i == 1 then PP.empty else PP.char '^' PP.<> PP.int i
 
--- | Pretty printing function for 'Polynomial'.
--- Should be used for basic types that do not provide the 'Pretty' instance.
 ppPolynomial  :: (Multiplicative c, Eq c) => (c -> PP.Doc) -> (v -> PP.Doc) -> Polynomial c v -> PP.Doc
-ppPolynomial ppr ppv (Poly ts) 
+ppPolynomial ppr ppv (Poly ts)
   | M.null ts = PP.int 0
   | otherwise = PP.hcat . PP.punctuate (PP.text " + ") $ map k $ M.toAscList ts
-  where 
-    k (m@(Mono ps), c) 
-      | M.null ps = ppr c 
+  where
+    k (m@(Mono ps), c)
+      | M.null ps = ppr c
       | c == one  = ppMonomial ppv m
       | otherwise = ppr c PP.<> PP.char '*' PP.<> ppMonomial ppv m
 
