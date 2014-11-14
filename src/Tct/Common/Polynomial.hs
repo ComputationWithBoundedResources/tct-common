@@ -30,8 +30,10 @@ module Tct.Common.Polynomial
   , scale
   -- ** Getters
   , coefficients
+  , coefficients'
   , variables
   , constantValue
+  , splitConstantValue
   -- ** Properties
   , degree
   , isLinear
@@ -172,6 +174,13 @@ coefficients p@(Poly ts)
   | isZero p  = [zero]
   | otherwise = M.elems ts
 
+-- | Like 'coefficients', but separates the constant part.
+-- 
+-- prop> coefficients' (constant v) = ([], v)
+coefficients' :: (SemiRing c, Ord v) => Polynomial c v -> ([c],c)
+coefficients' p = (M.elems ts, c)
+  where (Poly ts,c) = splitConstantValue p
+
 -- | Returns the (set of) variables of the polynomial (in arbitrary order).
 --
 -- prop> variables (constant v) = []
@@ -185,6 +194,16 @@ variables (Poly ts) = nub $ concatMap k (M.keys ts)
 -- prop> constantValue (constant v) = v
 constantValue :: (SemiRing c, Ord v) => Polynomial c v -> c
 constantValue (Poly ts) = zero `fromMaybe` M.lookup mone ts
+
+-- | Splits a non-zero polynomial in a (non-constant, constant) part.
+--
+-- prop> splitConstantValue (constant zero) = (zero,zero)
+splitConstantValue :: (SemiRing c, Ord v) => Polynomial c v -> (Polynomial c v, c)
+splitConstantValue p@(Poly ts)
+  | isZero p  = (pzero, zero)
+  | otherwise = (Poly (M.filterWithKey f ts), constantValue p)
+    where f k _ = k /= mone
+
 
 
 
