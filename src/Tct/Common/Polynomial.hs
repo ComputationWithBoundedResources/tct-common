@@ -40,6 +40,7 @@ module Tct.Common.Polynomial
   , isStronglyLinear
   -- ** Substitution/Maps
   , mapCoefficients
+  , mapCoefficientsM
   , substituteVariables
 
   -- * View
@@ -62,6 +63,7 @@ module Tct.Common.Polynomial
 
 import           Control.Monad
 import           Data.List              (foldl', nub)
+import qualified Data.Traversable as T (mapM)
 import qualified Data.Map.Strict        as M
 import           Data.Maybe             (fromMaybe)
 
@@ -262,6 +264,10 @@ substituteVariables (Poly ts) subs = pbigAdd $ foldl' handleTerms [] (M.toList t
 -- | Maps over the coefficients.
 mapCoefficients :: (Additive c', Eq c') => (c -> c') -> Polynomial c v -> Polynomial c' v
 mapCoefficients f (Poly ts) = pnormalise $ Poly (f `M.map` ts)
+
+-- | Monad version of 'mapCoefficients'.
+mapCoefficientsM :: (Monad m, Additive c', Eq c') => (c -> m c') -> Polynomial c v -> m (Polynomial c' v)
+mapCoefficientsM f (Poly ts) = (pnormalise . Poly) `liftM` (f `T.mapM` ts)
 
 
 --- * View -----------------------------------------------------------------------------------------------------------
