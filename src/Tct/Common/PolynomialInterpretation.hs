@@ -66,7 +66,7 @@ data CoefficientVar fun = CoefficientVar
   { restrict :: Bool                        -- ^ Strictness Annotation.
   , varfun   :: fun
   , argpos   :: P.Monomial SomeIndeterminate
-  } deriving (Eq, Ord)
+  } deriving (Eq, Ord, Show)
 
 newtype PolyInter fun c = PolyInter 
   { interpretations :: M.Map fun (SomePolynomial c) }
@@ -76,7 +76,7 @@ mkCoefficient :: Eq fun => Kind fun -> fun -> P.Monomial SomeIndeterminate -> Co
 mkCoefficient (Unrestricted shp) f        = CoefficientVar (shp == StronglyLinear) f
 mkCoefficient (ConstructorBased shp cs) f = CoefficientVar (shp == StronglyLinear || f `elem` cs) f
 
-mkInterpretation :: Eq fun => Kind fun -> (fun, Int) -> P.PolynomialView (CoefficientVar fun) SomeIndeterminate
+mkInterpretation :: Eq fun => Kind fun -> (fun, Int) -> P.PView (CoefficientVar fun) SomeIndeterminate
 mkInterpretation k (f,ar) = fromShape (shape k) (mkCoefficient k f) (indeterminates ar)
   where
     fromShape StronglyLinear = P.linear
