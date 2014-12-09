@@ -43,6 +43,8 @@ module Tct.Common.Polynomial
   , mapCoefficients
   , mapCoefficientsM
   , substituteVariables
+  , Zip (..)
+  , zipCoefficients
   , zipCoefficientsWith
 
   -- * View
@@ -50,6 +52,7 @@ module Tct.Common.Polynomial
   , PView'
   , fromView'
   , toView'
+  , mtoView'
   -- ** view constructors
   , (^^^) 
   , linear
@@ -277,19 +280,30 @@ mapCoefficients f (Poly ts) = pnormalise $ Poly (f `M.map` ts)
 mapCoefficientsM :: (Monad m, Additive c', Eq c') => (c -> m c') -> Polynomial c v -> m (Polynomial c' v)
 mapCoefficientsM f (Poly ts) = (pnormalise . Poly) `liftM` (f `T.mapM` ts)
 
+data Zip a = OL a | OR a | C a a
+
+zipCoefficients :: Ord v => Polynomial c v -> Polynomial c v -> Polynomial (Zip c) v
+zipCoefficients (Poly ts1) (Poly ts2) = Poly $ M.mergeWithKey (\_ a1 a2 -> Just (C a1 a2)) (M.map OL) (M.map OR) ts1 ts2
+
 zipCoefficientsWith :: (Additive c, Eq c, Ord v) => (c -> c -> c) -> Polynomial c v -> Polynomial c v -> Polynomial c v
 zipCoefficientsWith f (Poly ts1) (Poly ts2) = pnormalise $ Poly (M.unionWith f ts1 ts2)
+
+
 
 --- * View -----------------------------------------------------------------------------------------------------------
 
 
-type PView' c v = [(c,[(v,Int)])]
+type PView' c v = [(c,MView' v)]
+type MView'   v = [(v,Int)]
 
 fromView' :: (Additive c, Eq c, Ord v) => PView' c v -> Polynomial c v
 fromView' = fromView . map (fmap mfromView)
 
 toView' :: Polynomial c v -> PView' c v
-toView' (Poly ts)  = [ (c, M.assocs m) | (Mono m, c) <- M.assocs ts ]
+toView' (Poly ts) = [ (c, mtoView' m) | (m, c) <- M.assocs ts ]
+
+mtoView' :: Monomial v -> MView' v
+mtoView' (Mono ps) = M.assocs ps
 
 
 -- MS: 

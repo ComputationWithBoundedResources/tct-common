@@ -14,6 +14,8 @@ module Tct.Common.PolynomialInterpretation
   , degree
   ) where
 
+
+import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Data (Typeable)
 
@@ -49,7 +51,7 @@ instance SParsable prob Shape where
 -- | The kind of the interpretation.
 data Kind fun
   = Unrestricted     { shape :: Shape }
-  | ConstructorBased { shape :: Shape, constructors :: [fun] }
+  | ConstructorBased { shape :: Shape, constructors :: S.Set fun }
   deriving Show
 
 -- | Canonical variable type for abstract polynomials.
@@ -72,11 +74,11 @@ newtype PolyInter fun c = PolyInter
   { interpretations :: M.Map fun (SomePolynomial c) }
   deriving Show
 
-mkCoefficient :: Eq fun => Kind fun -> fun -> P.Monomial SomeIndeterminate -> CoefficientVar fun
+mkCoefficient :: Ord fun => Kind fun -> fun -> P.Monomial SomeIndeterminate -> CoefficientVar fun
 mkCoefficient (Unrestricted shp) f        = CoefficientVar (shp == StronglyLinear) f
-mkCoefficient (ConstructorBased shp cs) f = CoefficientVar (shp == StronglyLinear || f `elem` cs) f
+mkCoefficient (ConstructorBased shp cs) f = CoefficientVar (shp == StronglyLinear || f `S.member` cs) f
 
-mkInterpretation :: Eq fun => Kind fun -> (fun, Int) -> P.PView (CoefficientVar fun) SomeIndeterminate
+mkInterpretation :: Ord fun => Kind fun -> (fun, Int) -> P.PView (CoefficientVar fun) SomeIndeterminate
 mkInterpretation k (f,ar) = fromShape (shape k) (mkCoefficient k f) (indeterminates ar)
   where
     fromShape StronglyLinear = P.linear
@@ -84,7 +86,7 @@ mkInterpretation k (f,ar) = fromShape (shape k) (mkCoefficient k f) (indetermina
     fromShape Quadratic      = P.quadratic
     fromShape (Mixed i)      = P.mixed i
 
-degree :: Eq fun => Kind fun -> PolyInter fun Int -> Complexity
+degree :: Ord fun => Kind fun -> PolyInter fun Int -> Complexity
 degree k inter = case k of
   Unrestricted {}
     | deg1 && isStrong -> Poly (Just 1)
@@ -94,7 +96,7 @@ degree k inter = case k of
       deg1     = M.foldr' (\p b -> (P.degree p <= 1 && b)) True inters
       isStrong = M.foldr' ((&&) . P.isStronglyLinear) True inters
   ConstructorBased _ cs -> Poly (Just deg)
-    where deg = M.foldrWithKey' (\f p b -> max b $ if f `elem` cs then 0 else P.degree p) 0 inters
+    where deg = M.foldrWithKey' (\f p b -> max b $ if f `S.member` cs then 0 else P.degree p) 0 inters
   where inters = interpretations inter
 
 
