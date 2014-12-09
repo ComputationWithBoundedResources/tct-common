@@ -361,7 +361,7 @@ linear f = (mkTerm [] :) . map (\v -> mkTerm [v^^^1])
 -- | @'quadratic' f [x,...,z] = cx2*x^2 + cx*x + ... + cz2*z^2 + cz*z + c@
 -- constructs a quadratic polynomial; the coefficients are determined by applying @f@ to each monomial.
 quadratic :: Ord v => (Monomial v -> c) -> [v] -> PView c v
-quadratic f = (mkTerm [] :) . map (\v -> mkTerm [v^^^2,v^^^1])
+quadratic f vs = (mkTerm [] :) $ map (\v -> mkTerm [v^^^2])  vs ++ map (\v -> mkTerm [v^^^1]) vs
   where mkTerm ps = let m = mfromView ps in (f m, m)
 
 -- | Creates a mixed polynom up to a specified degree; the coefficients are determined by applying @f@ to each monomial.
