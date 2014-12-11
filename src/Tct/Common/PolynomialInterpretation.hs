@@ -45,7 +45,7 @@ instance SParsable prob Shape where
     [ P.symbol (show StronglyLinear) >> return StronglyLinear
     , P.symbol (show Linear)         >> return Linear
     , P.symbol (show Quadratic)      >> return Quadratic
-    , P.symbol "Mixed  "             >> P.nat >>= return . Mixed ]
+    , P.symbol "Mixed "              >> P.nat >>= return . Mixed ]
 
 
 -- | The kind of the interpretation.

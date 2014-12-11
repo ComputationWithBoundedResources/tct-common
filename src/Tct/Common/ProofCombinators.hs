@@ -4,6 +4,7 @@ module Tct.Common.ProofCombinators
  ( 
  OrientationProof (..)
  , ApplicationProof (..)
+ , ApplicationProofT (..)
  ) where
 
 
