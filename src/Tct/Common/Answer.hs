@@ -1,5 +1,5 @@
 module Tct.Common.Answer 
-  (Answer
+  (Answer (..)
   , answering
   ) where
 

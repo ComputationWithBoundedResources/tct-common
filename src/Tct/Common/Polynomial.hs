@@ -299,8 +299,11 @@ type MView'   v = [(v,Int)]
 fromView' :: (Additive c, Eq c, Ord v) => PView' c v -> Polynomial c v
 fromView' = fromView . map (fmap mfromView)
 
-toView' :: Polynomial c v -> PView' c v
-toView' (Poly ts) = [ (c, mtoView' m) | (m, c) <- M.assocs ts ]
+-- | prop> toView' zero = [(0,[])]
+toView' :: (Additive c, Eq c, Ord v) => Polynomial c v -> PView' c v
+toView' p@(Poly ts)
+  | p == zero = [(zero,[])]
+  | otherwise = [ (c, mtoView' m) | (m, c) <- M.assocs ts ]
 
 mtoView' :: Monomial v -> MView' v
 mtoView' (Mono ps) = M.assocs ps

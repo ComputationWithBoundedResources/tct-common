@@ -103,10 +103,10 @@ degree k inter = case k of
 --- Proofdata --------------------------------------------------------------------------------------------------------
 
 instance Show SomeIndeterminate where
-  show (SomeIndeterminate i) = "x_" ++ show i
+  show (SomeIndeterminate i) = "x" ++ show i
 
 instance PP.Pretty SomeIndeterminate where
-  pretty (SomeIndeterminate i) = PP.text "x_" PP.<> PP.int i
+  pretty (SomeIndeterminate i) = PP.text "x" PP.<> PP.int i
 
 instance PP.Pretty Shape where
   pretty StronglyLinear = PP.text "stronglyLinear"
