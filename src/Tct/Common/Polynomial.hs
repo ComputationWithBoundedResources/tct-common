@@ -42,6 +42,7 @@ module Tct.Common.Polynomial
   -- ** Substitution/Maps
   , mapCoefficients
   , mapCoefficientsM
+  , rename
   , substituteVariables
   , Zip (..)
   , zipCoefficients
@@ -259,8 +260,10 @@ pbigMult = foldl' pmult pone
 pbigAdd :: (SemiRing c, Eq c, Ord v) => [Polynomial c v] -> Polynomial c v
 pbigAdd = foldl' padd pzero
 
+-- FIXME: what should be returned for variables not occuring in the mappings
+-- consider eg {x->p1} in x*y and {} in x*y; currently we return one so we get p1*1 and 1*1 
 -- | @'substituteVariables' p subs@ substitutes the variables in p according to @subs@.
--- Variables occuring not in @subs@ are mapped to the unit ('zero') polynomial.
+-- Variables occuring not in @subs@ are mapped to the unit ('one') polynomial.
 substituteVariables :: (SemiRing c, Eq c, Ord v, Ord v') => Polynomial c v -> M.Map v (Polynomial c v') -> Polynomial c v'
 substituteVariables (Poly ts) subs = pbigAdd $ foldl' handleTerms [] (M.toList ts)
   where
@@ -279,6 +282,11 @@ mapCoefficients f (Poly ts) = pnormalise $ Poly (f `M.map` ts)
 -- | Monad version of 'mapCoefficients'.
 mapCoefficientsM :: (Monad m, Additive c', Eq c') => (c -> m c') -> Polynomial c v -> m (Polynomial c' v)
 mapCoefficientsM f (Poly ts) = (pnormalise . Poly) `liftM` (f `T.mapM` ts)
+
+-- | Usafe rename.
+rename :: (Eq v, Ord v') => (v -> v') -> Polynomial c v -> Polynomial c v'
+rename f (Poly ts) = Poly (M.mapKeys k ts) 
+  where k (Mono ps) = Mono (M.mapKeys f ps)
 
 data Zip a = OL a | OR a | C a a
 
