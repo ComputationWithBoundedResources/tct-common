@@ -20,7 +20,7 @@ instance PP.Pretty Answer where
   pretty _  = PP.text "MAYBE"
 
 -- | Returns the time upper bound as an answer.
-answering :: T.Return (T.ProofTree l) -> T.SomeAnswer
-answering = T.answer . T.returning (cert . T.certificate) (const Unknown)
+answering :: T.ProofTree l -> T.SomeAnswer
+answering = T.answer . cert . T.certificate
   where cert c = Yes (T.timeLB c, T.timeUB c)
 

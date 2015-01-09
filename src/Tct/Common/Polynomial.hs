@@ -246,12 +246,12 @@ isLinear :: Polynomial c v -> Bool
 isLinear (Poly ts) = all misLinear (M.keys ts)
 
 -- | Checks if the polynomial is strongly linear.
-isStronglyLinear :: (SemiRing c, Eq c, Ord v) =>  Polynomial c v -> Bool
+isStronglyLinear :: (Ring c, Eq c, Ord v) =>  Polynomial c v -> Bool
 isStronglyLinear (Poly ts) = all k (M.toList ts)
   where
     k (m, c)
       | m == mone = True
-      | otherwise = c == one && misLinear m
+      | otherwise = (c == one || c == neg one) && misLinear m
 
 
 pbigMult :: (SemiRing c, Eq c, Ord v) => [Polynomial c v] -> Polynomial c v

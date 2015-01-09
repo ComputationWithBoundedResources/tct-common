@@ -26,9 +26,10 @@ instance PP.Pretty o => PP.Pretty (OrientationProof o) where
   pretty Empty            = PP.paragraph "All components are processed, nothing ruther to orient."
 
 
--- | A 'Either' like type, where Left is fixed to String.
+-- | A proof combinator that provides a cut evaluation.
 data ApplicationProof p
   = Inapplicable String
+  | Closed
   | Applicable p
   deriving (Show, Functor)
 
@@ -38,15 +39,18 @@ newtype ApplicationProofT m p = ApplicationT { runApplicationT :: m (Application
 instance Applicative ApplicationProof where
   pure                   = Applicable
   Inapplicable msg <*> _ = Inapplicable msg
+  Closed  <*> _          = Closed
   Applicable f <*> a     = fmap f a
 
 instance PP.Pretty p => PP.Pretty (ApplicationProof p) where
   pretty (Inapplicable s) = PP.paragraph $ "The processor is not applicable. The reason is " ++ s ++ "."
+  pretty Closed           = PP.text "The problem is already solved."
   pretty (Applicable p)   = PP.pretty p
 
 instance Monad ApplicationProof where
   return                 = Applicable
   Inapplicable msg >>= _ = Inapplicable msg
+  Closed >>= _           = Closed
   Applicable p >>= k     = k p
 
 instance Functor f => Functor (ApplicationProofT f) where
@@ -62,6 +66,7 @@ instance Monad m => Monad (ApplicationProofT m) where
     a <- runApplicationT m
     case a of
       Inapplicable msg -> return (Inapplicable msg)
+      Closed           -> return Closed
       Applicable p     -> runApplicationT (k p)
 
 instance MonadTrans ApplicationProofT where
