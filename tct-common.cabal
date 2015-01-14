@@ -30,10 +30,9 @@ Library
   hs-source-dirs:
     src
   exposed-modules:
-    Tct.Common.Answer
-    Tct.Common.ProofCombinators
     Tct.Common.Polynomial
     Tct.Common.PolynomialInterpretation
+    Tct.Common.ProofCombinators
     Tct.Common.Ring
     Tct.Common.SMT
   build-depends:
@@ -42,7 +41,7 @@ Library
     base           == 4.*,
     parsec         == 3.1.*,
 
-    smtlib         == 0.*,
+    slogic         == 0.*,
     tct-core       == 3.*
   ghc-options:
     -j -Wall -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N

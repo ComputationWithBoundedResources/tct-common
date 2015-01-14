@@ -12,19 +12,21 @@ import Control.Applicative
 import Control.Monad.Trans
 import Control.Monad
 import qualified Tct.Core.Common.Pretty as PP
+import qualified Tct.Core.Common.Xml    as Xml
 
 
 data OrientationProof o
   = Order o
-  | Empty
   | Incompatible
   deriving (Show, Functor)
 
 instance PP.Pretty o => PP.Pretty (OrientationProof o) where
   pretty (Order o)        = PP.pretty o
   pretty Incompatible     = PP.paragraph "The input can not be schown compatible."
-  pretty Empty            = PP.paragraph "All components are processed, nothing ruther to orient."
 
+instance Xml.Xml o => Xml.Xml (OrientationProof o) where
+  toXml (Order o)        = Xml.elt "order" (Xml.toXml o)
+  toXml Incompatible     = Xml.text "incompatible"
 
 -- | A proof combinator that provides a cut evaluation.
 data ApplicationProof p
@@ -46,6 +48,12 @@ instance PP.Pretty p => PP.Pretty (ApplicationProof p) where
   pretty (Inapplicable s) = PP.paragraph $ "The processor is not applicable. The reason is " ++ s ++ "."
   pretty Closed           = PP.text "The problem is already solved."
   pretty (Applicable p)   = PP.pretty p
+
+instance Xml.Xml p => Xml.Xml (ApplicationProof p) where
+  toXml (Inapplicable s) = Xml.elt "inapplicable" (Xml.text s)
+  toXml Closed           = Xml.text "closed"
+  toXml (Applicable p)   = Xml.toXml p
+
 
 instance Monad ApplicationProof where
   return                 = Applicable

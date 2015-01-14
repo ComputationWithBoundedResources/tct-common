@@ -4,26 +4,18 @@ module Tct.Common.SMT
   ) where
 
 
-import SmtLib.Logic.Core      as SMT
-import SmtLib.Logic.Int       as SMT
-import SmtLib.SMT             as SMT
-import SmtLib.Solver          as SMT
+import SLogic.Smt as SMT 
 
 import Tct.Common.Ring
-import Tct.Core.Common.Pretty as PP
 
-
-instance Additive SMT.Expr where
+instance Additive SMT.IExpr where
   zero = SMT.zero
   add  = (SMT..+)
 
-instance Multiplicative SMT.Expr where
+instance Multiplicative SMT.IExpr where
   one = SMT.one
   mul = (SMT..*)
 
-instance AdditiveGroup SMT.Expr where
-  neg = SMT.nNeg
-
-instance PP.Pretty SMT.Expr where
-  pretty = PP.text . SMT.prettyExpr
+instance AdditiveGroup SMT.IExpr where
+  neg = SMT.neg
 
