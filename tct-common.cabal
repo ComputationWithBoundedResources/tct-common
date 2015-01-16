@@ -30,6 +30,7 @@ Library
   hs-source-dirs:
     src
   exposed-modules:
+    Tct.Common.CeTA
     Tct.Common.Polynomial
     Tct.Common.PolynomialInterpretation
     Tct.Common.ProofCombinators
