@@ -25,7 +25,7 @@ instance PP.Pretty o => PP.Pretty (OrientationProof o) where
   pretty Incompatible     = PP.paragraph "The input can not be schown compatible."
 
 instance Xml.Xml o => Xml.Xml (OrientationProof o) where
-  toXml (Order o)        = Xml.elt "order" [Xml.toXml o]
+  toXml (Order o)        = Xml.toXml o
   toXml Incompatible     = Xml.elt "incompatible" []
 
 -- | A proof combinator that provides a cut evaluation.

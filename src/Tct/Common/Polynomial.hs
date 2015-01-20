@@ -76,6 +76,7 @@ import qualified Data.Map.Strict        as M
 import           Data.Maybe             (fromMaybe)
 
 import qualified Tct.Core.Common.Pretty as PP
+import qualified Tct.Core.Common.Xml as Xml
 
 import           Tct.Common.Ring
 
@@ -410,4 +411,20 @@ ppPolynomial ppr ppv (Poly ts)
       | M.null ps = ppr c
       | c == one  = ppMonomial ppv m
       | otherwise = ppr c PP.<> PP.char '*' PP.<> ppMonomial ppv m
+
+instance Enum v => Xml.Xml (Polynomial Int v) where
+  toXml = xmlPolynomial 
+    (\c -> Xml.elt "coefficient" [Xml.elt "integer" [Xml.int c]]) 
+    (\v -> Xml.elt "variable" [Xml.int . succ $ fromEnum v])
+
+xmlPolynomial :: Additive c => (c -> Xml.XmlContent) -> (v -> Xml.XmlContent) -> Polynomial c v -> Xml.XmlContent
+xmlPolynomial xc xv (Poly ts)
+  | M.null ts = xc zero
+  | otherwise = xop "sum" (map xmono $ M.toList ts)
+  where
+    xop s as = Xml.elt s [ Xml.elt "polynomial" [a] | a <- as]
+    xmono (Mono ps, c)
+      | M.null ps = xc c
+      | otherwise = xop "product" (xc c: concatMap xpows (M.toList ps))
+    xpows (v,i) = replicate i (xv v)
 
