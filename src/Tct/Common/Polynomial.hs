@@ -415,7 +415,7 @@ ppPolynomial ppr ppv (Poly ts)
 instance Enum v => Xml.Xml (Polynomial Int v) where
   toXml = xmlPolynomial 
     (\c -> Xml.elt "coefficient" [Xml.elt "integer" [Xml.int c]]) 
-    (\v -> Xml.elt "variable" [Xml.int . succ $ fromEnum v])
+    (\v -> Xml.elt "variable" [Xml.int $ fromEnum v])
 
 xmlPolynomial :: Additive c => (c -> Xml.XmlContent) -> (v -> Xml.XmlContent) -> Polynomial c v -> Xml.XmlContent
 xmlPolynomial xc xv (Poly ts)

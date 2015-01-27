@@ -4,7 +4,8 @@ module Tct.Common.PolynomialInterpretation
   Shape (..)
   , shapeArg
   , Kind (..)
-  , SomeIndeterminate (..)
+  , SomeIndeterminate
+  , indeterminates
   , SomePolynomial
 
   , CoefficientVar(..)
@@ -57,8 +58,9 @@ data Kind fun
 -- | Canonical variable type for abstract polynomials.
 newtype SomeIndeterminate = SomeIndeterminate Int deriving (Eq, Ord, Enum)
 
-indeterminates :: Int -> [SomeIndeterminate]
-indeterminates n = take n [SomeIndeterminate 0 .. ]
+-- | By convention we start with 1.
+indeterminates :: [SomeIndeterminate]
+indeterminates = [SomeIndeterminate 1 .. ]
 
 
 type SomePolynomial c = P.Polynomial c SomeIndeterminate
@@ -78,8 +80,9 @@ mkCoefficient :: Ord fun => Kind fun -> fun -> P.Monomial SomeIndeterminate -> C
 mkCoefficient (Unrestricted shp) f        = CoefficientVar (shp == StronglyLinear) f
 mkCoefficient (ConstructorBased shp cs) f = CoefficientVar (shp == StronglyLinear || f `S.member` cs) f
 
+-- FIXME: MS: for constructorbased; we restict the coefficient but not the shape !!!
 mkInterpretation :: Ord fun => Kind fun -> (fun, Int) -> P.PView (CoefficientVar fun) SomeIndeterminate
-mkInterpretation k (f,ar) = fromShape (shape k) (mkCoefficient k f) (indeterminates ar)
+mkInterpretation k (f,ar) = fromShape (shape k) (mkCoefficient k f) (take ar indeterminates)
   where
     fromShape StronglyLinear = P.linear
     fromShape Linear         = P.linear
