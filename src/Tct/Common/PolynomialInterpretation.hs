@@ -16,6 +16,7 @@ module Tct.Common.PolynomialInterpretation
   ) where
 
 
+import Data.Monoid
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Data (Typeable)
@@ -69,14 +70,14 @@ type SomePolynomial c = P.Polynomial c SomeIndeterminate
 data CoefficientVar fun = CoefficientVar
   { restrict :: Bool                        -- ^ Strictness Annotation.
   , varfun   :: fun
-  , argpos   :: P.Monomial SomeIndeterminate
+  , argpos   :: P.MView SomeIndeterminate
   } deriving (Eq, Ord, Show)
 
 newtype PolyInter fun c = PolyInter 
   { interpretations :: M.Map fun (SomePolynomial c) }
   deriving Show
 
-mkCoefficient :: Ord fun => Kind fun -> fun -> P.Monomial SomeIndeterminate -> CoefficientVar fun
+mkCoefficient :: Ord fun => Kind fun -> fun -> P.MView SomeIndeterminate -> CoefficientVar fun
 mkCoefficient (Unrestricted shp) f        = CoefficientVar (shp == StronglyLinear) f
 mkCoefficient (ConstructorBased shp cs) f = CoefficientVar (shp == StronglyLinear || f `S.member` cs) f
 
@@ -109,21 +110,21 @@ instance Show SomeIndeterminate where
   show (SomeIndeterminate i) = "x" ++ show i
 
 instance PP.Pretty SomeIndeterminate where
-  pretty (SomeIndeterminate i) = PP.text "x" PP.<> PP.int i
+  pretty (SomeIndeterminate i) = PP.text "x" <> PP.int i
 
 instance PP.Pretty Shape where
   pretty StronglyLinear = PP.text "stronglyLinear"
   pretty Linear         = PP.text "linear"
   pretty Quadratic      = PP.text "quadratic"
-  pretty (Mixed i)      = PP.text "mixed" PP.<> PP.parens (PP.int i)
+  pretty (Mixed i)      = PP.text "mixed" <> PP.parens (PP.int i)
 
 instance PP.Pretty fun => PP.Pretty (Kind fun) where
-  pretty (Unrestricted shp)       = PP.text "unrestricted" PP.<> PP.parens (PP.pretty shp)
-  pretty (ConstructorBased shp _) = PP.text "constructor-based" PP.<> PP.parens (PP.pretty shp)
+  pretty (Unrestricted shp)       = PP.text "unrestricted" <> PP.parens (PP.pretty shp)
+  pretty (ConstructorBased shp _) = PP.text "constructor-based" <> PP.parens (PP.pretty shp)
 
 instance PP.Pretty fun => PP.Pretty (PolyInter fun Int) where
   pretty pint = PP.table [(PP.AlignRight, as), (PP.AlignLeft, bs), (PP.AlignLeft,cs)]
     where 
       (as,bs,cs) = unzip3 $ map k (M.toList $ interpretations pint)
-      k (f,p)    = (PP.pretty f PP.<> PP.tupled (map PP.pretty (P.variables p)), PP.text " = ", PP.pretty p)
+      k (f,p)    = (PP.text "p" <> PP.parens (PP.pretty f), PP.text " = ", PP.pretty p)
 
