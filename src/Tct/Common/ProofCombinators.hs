@@ -29,7 +29,7 @@ instance Xml.Xml o => Xml.Xml (OrientationProof o) where
   toXml Incompatible     = Xml.elt "incompatible" []
 
   toCeTA (Order o)        = Xml.toCeTA o
-  toCeTA Incompatible     = Xml.elt "incompatible" []
+  toCeTA Incompatible     = Xml.unsupported
 
 -- | A proof combinator that provides a cut evaluation.
 data ApplicationProof p
@@ -57,9 +57,8 @@ instance Xml.Xml p => Xml.Xml (ApplicationProof p) where
   toXml Closed           = Xml.elt "closed" []
   toXml (Applicable p)   = Xml.toXml p
 
-  toCeTA (Inapplicable s) = Xml.elt "inapplicable" [Xml.text s]
-  toCeTA Closed           = Xml.elt "rIsEmpty" []
-  toCeTA (Applicable p)   = Xml.toCeTA p
+  toCeTA Closed          = Xml.elt "rIsEmpty" []
+  toCeTA _               = Xml.unsupported
 
 instance Monad ApplicationProof where
   return                 = Applicable
