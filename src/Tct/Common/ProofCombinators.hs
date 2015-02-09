@@ -57,8 +57,10 @@ instance Xml.Xml p => Xml.Xml (ApplicationProof p) where
   toXml Closed           = Xml.elt "closed" []
   toXml (Applicable p)   = Xml.toXml p
 
-  toCeTA Closed          = Xml.elt "rIsEmpty" []
-  toCeTA _               = Xml.unsupported
+  toCeTA Closed           = Xml.elt "rIsEmpty" []
+  toCeTA (Applicable p)   = Xml.toCeTA p
+  toCeTA (Inapplicable _) = Xml.unsupported
+
 
 instance Monad ApplicationProof where
   return                 = Applicable

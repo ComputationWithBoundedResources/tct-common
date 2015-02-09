@@ -13,6 +13,7 @@ module Tct.Common.PolynomialInterpretation
 
   , mkInterpretation
   , degree
+  , bound
   ) where
 
 
@@ -77,21 +78,23 @@ newtype PolyInter fun c = PolyInter
   { interpretations :: M.Map fun (SomePolynomial c) }
   deriving Show
 
-mkCoefficient :: Ord fun => Kind fun -> fun -> P.MView SomeIndeterminate -> CoefficientVar fun
-mkCoefficient (Unrestricted shp) f        = CoefficientVar (shp == StronglyLinear) f
-mkCoefficient (ConstructorBased shp cs) f = CoefficientVar (shp == StronglyLinear || f `S.member` cs) f
-
--- FIXME: MS: for constructorbased; we restict the coefficient but not the shape !!!
 mkInterpretation :: Ord fun => Kind fun -> (fun, Int) -> P.PView (CoefficientVar fun) SomeIndeterminate
-mkInterpretation k (f,ar) = fromShape (shape k) (mkCoefficient k f) (take ar indeterminates)
+mkInterpretation k (f, ar) = case k of
+  (Unrestricted shp) -> fromShape shp (mkCoefficient shp f) vs
+  (ConstructorBased shp cs) 
+    | f `S.member` cs -> P.linear (CoefficientVar True f) vs
+    | otherwise       -> fromShape shp (mkCoefficient shp f) vs
   where
+    vs = take ar indeterminates
+
+    mkCoefficient shp = CoefficientVar (shp == StronglyLinear)
     fromShape StronglyLinear = P.linear
     fromShape Linear         = P.linear
     fromShape Quadratic      = P.quadratic
     fromShape (Mixed i)      = P.mixed i
 
-degree :: Ord fun => Kind fun -> PolyInter fun Int -> Complexity
-degree k inter = case k of
+bound :: Ord fun => Kind fun -> PolyInter fun Int -> Complexity
+bound k inter = case k of
   Unrestricted {}
     | deg1 && isStrong -> Poly (Just 1)
     | deg1             -> Exp (Just 1)
@@ -102,6 +105,9 @@ degree k inter = case k of
   ConstructorBased _ cs -> Poly (Just deg)
     where deg = M.foldrWithKey' (\f p b -> max b $ if f `S.member` cs then 0 else P.degree p) 0 inters
   where inters = interpretations inter
+
+degree :: PolyInter fun Int -> Int
+degree inter = M.foldl' (\m -> max m . P.degree) 0 (interpretations inter)
 
 
 --- Proofdata --------------------------------------------------------------------------------------------------------
