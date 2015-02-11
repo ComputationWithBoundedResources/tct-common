@@ -41,6 +41,7 @@ Library
     mtl            >= 2.1 && < 2.2,
     base           == 4.*,
     parsec         == 3.1.*,
+    bytestring     == 0.10.*,
 
     slogic         == 0.*,
     tct-core       == 3.*
