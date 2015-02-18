@@ -11,7 +11,7 @@ cetaDocument = Xml.toDocument (Just css)
 
 certificationProblem :: Xml.XmlContent -> Xml.XmlContent -> Xml.XmlContent
 certificationProblem complexityInput' complexityProof' = 
-  Xml.setAtts [att1, att2] $ Xml.elt "certificationProblem" [input, cpfVersion, proof, origin]
+  flip Xml.setAtts [att1, att2] $ Xml.elt "certificationProblem" [input, cpfVersion, proof, origin]
   where
     att1 = Xml.att "xmlns:xsi" "http://www.w3.org/2001/XMLSchema-instance"
     att2 = Xml.att "xsi:noNamespaceSchemaLocation" "cpf.xsd"
