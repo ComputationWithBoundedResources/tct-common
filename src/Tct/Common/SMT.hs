@@ -4,6 +4,8 @@ module Tct.Common.SMT
   , minismt, minismt'
   , yices, yices'
   , z3, z3'
+  -- encoding
+  , encodePoly
   ) where
 
 
@@ -15,6 +17,7 @@ import           SLogic.Smt                 as SMT hiding (minismt, minismt', yi
 
 import           Tct.Core.Common.Concurrent
 
+import qualified Tct.Common.Polynomial      as P
 import           Tct.Common.Ring
 
 
@@ -52,4 +55,10 @@ z3' args = smtSolver "z3" args z3Formatter z3Parser
 
 z3 :: MonadIO m => SolverState Expr -> m (Result (M.Map Var Value))
 z3 = z3' ["-smt2", "-in"]
+
+-- | standard polynomial encoding
+encodePoly :: P.Polynomial Int String -> SMT.IExpr
+encodePoly ms = SMT.bigAdd (map encodeMono $ P.toView ms) where
+  encodeMono (c,ps) = SMT.bigMul (SMT.num c: concatMap encodePower ps)
+  encodePower (v,e) = replicate e (SMT.ivar v)
 
