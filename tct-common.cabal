@@ -31,17 +31,20 @@ Library
     src
   exposed-modules:
     Tct.Common.CeTA
+    Tct.Common.Graph
     Tct.Common.Polynomial
     Tct.Common.PolynomialInterpretation
     Tct.Common.ProofCombinators
     Tct.Common.Ring
     Tct.Common.SMT
   build-depends:
-    containers     >= 0.5 && < 0.6,
-    mtl            >= 2.1 && < 2.2,
     base           == 4.*,
-    parsec         == 3.1.*,
     bytestring     == 0.10.*,
+    containers     >= 0.5 && < 0.6,
+    fgl            == 5.5.*,
+    fgl-visualize  == 0.1.0.*,
+    mtl            >= 2.1 && < 2.2,
+    parsec         == 3.1.*,
 
     slogic         == 0.*,
     tct-core       == 3.*
