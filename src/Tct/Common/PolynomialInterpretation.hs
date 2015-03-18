@@ -17,6 +17,8 @@ module Tct.Common.PolynomialInterpretation
   ) where
 
 
+import Control.Monad (liftM)
+import qualified Data.Traversable as F
 import Data.Monoid
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -26,7 +28,9 @@ import qualified Tct.Core.Common.Pretty as PP
 import qualified Tct.Core.Common.Parser as P
 import Tct.Core.Data 
 
+import           Tct.Common.Ring
 import qualified Tct.Common.Polynomial  as P
+import qualified Tct.Common.SMT as SMT
 
 
 -- | The shape of the polynomials.
@@ -77,6 +81,12 @@ data CoefficientVar fun = CoefficientVar
 newtype PolyInter fun c = PolyInter 
   { interpretations :: M.Map fun (SomePolynomial c) }
   deriving Show
+
+instance (SMT.Decode m c a, Additive c, Eq c, Additive a, Eq a) => SMT.Decode m (PolyInter fun c) (PolyInter fun a) where
+  decode (PolyInter m) = PolyInter `liftM` F.traverse SMT.decode m
+
+instance (SMT.Decode m c a, Additive a, Eq a, Additive c, Eq c) => SMT.Decode m (SomePolynomial c) (SomePolynomial a) where
+  decode = P.mapCoefficientsM SMT.decode
 
 mkInterpretation :: Ord fun => Kind fun -> (fun, Int) -> P.PView (CoefficientVar fun) SomeIndeterminate
 mkInterpretation k (f, ar) = case k of
