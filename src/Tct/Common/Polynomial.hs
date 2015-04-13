@@ -369,8 +369,8 @@ ppMonomial pp (Mono ps)
     where k (v,i) = pp v PP.<> if i == 1 then PP.empty else PP.char '^' PP.<> PP.int i
 
 ppPolynomial  :: (Multiplicative c, Eq c) => (c -> PP.Doc) -> (v -> PP.Doc) -> Polynomial c v -> PP.Doc
-ppPolynomial ppr ppv (Poly ts)
-  | M.null ts = PP.int 0
+ppPolynomial ppr ppv p@(Poly ts)
+  | isZero p  = PP.int 0
   | otherwise = PP.hcat . PP.punctuate (PP.text " + ") $ map k $ M.toAscList ts
   where
     k (m@(Mono ps), c)
@@ -379,14 +379,15 @@ ppPolynomial ppr ppv (Poly ts)
       | otherwise = ppr c PP.<> PP.char '*' PP.<> ppMonomial ppv m
 
 instance Enum v => Xml.Xml (Polynomial Int v) where
-  toXml = xmlPolynomial
+  toXml p = Xml.elt "polynomial" . (:[]) $ xmlPolynomial
     (\c -> Xml.elt "coefficient" [Xml.elt "integer" [Xml.int c]])
     (\v -> Xml.elt "variable" [Xml.int $ fromEnum v])
+    p
   toCeTA = Xml.toXml
 
 xmlPolynomial :: Additive c => (c -> Xml.XmlContent) -> (v -> Xml.XmlContent) -> Polynomial c v -> Xml.XmlContent
-xmlPolynomial xc xv (Poly ts)
-  | M.null ts = xc zero
+xmlPolynomial xc xv p@(Poly ts)
+  | isZero p  = xc zero
   | otherwise = xop "sum" (map xmono $ M.toList ts)
   where
     xop s as = Xml.elt s [ Xml.elt "polynomial" [a] | a <- as]
