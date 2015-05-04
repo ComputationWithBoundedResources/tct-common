@@ -47,7 +47,7 @@ shapeArg = arg { argName = "shape" , argDomain = "<shape>" }  `withHelp` (s1:sha
     s1 = "Specifies the shape of the polynomial. <shape> is one of:"
     shapes = map ('*':)  [ show StronglyLinear, show Linear, show Quadratic, "Mixed <nat>"]
 
-instance SParsable prob Shape where
+instance SParsable i i Shape where
   parseS = P.choice
     [ P.symbol (show StronglyLinear) >> return StronglyLinear
     , P.symbol (show Linear)         >> return Linear
