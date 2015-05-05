@@ -40,7 +40,7 @@ smtSolver cmd args formatter parser st = do
 
 minismt' :: MonadIO m => Args -> Maybe Int -> SolverState Expr -> m (Result (M.Map Var Value))
 minismt' args mto = smtSolver "minismt" (args++to) minismtFormatter minismtParser
-  where to = maybe [] (\i -> ["-t", show (min 1 i) ]) mto
+  where to = maybe [] (\i -> ["-t", show (max 1 i) ]) mto
 
 minismt :: MonadIO m => Maybe Int -> SolverState Expr -> m (Result (M.Map Var Value))
 minismt = minismt' ["-m", "-v2", "-neg"]
@@ -53,7 +53,7 @@ yices = yices' []
 
 z3' :: MonadIO m => Args -> Maybe Int -> SolverState Expr -> m (Result (M.Map Var Value))
 z3' args mto = smtSolver "z3" (args++to) z3Formatter z3Parser
-  where to = maybe [] (\i -> ["-T", show (min 1 i) ]) mto
+  where to = maybe [] (\i -> ["-T", show (max 1 i) ]) mto
 
 z3 :: MonadIO m => Maybe Int -> SolverState Expr -> m (Result (M.Map Var Value))
 z3 = z3' ["-smt2", "-in"]
