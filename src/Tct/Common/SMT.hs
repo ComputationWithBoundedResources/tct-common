@@ -38,10 +38,11 @@ smtSolver cmd args formatter parser st = do
   errM <- liftIO $ spawn cmd args (`BS.hPutStr` formatter st)
   return $ either SMT.Error parser errM
 
-minismt' :: MonadIO m => Args -> SolverState Expr -> m (Result (M.Map Var Value))
-minismt' args = smtSolver "minismt" args minismtFormatter minismtParser
+minismt' :: MonadIO m => Args -> Maybe Int -> SolverState Expr -> m (Result (M.Map Var Value))
+minismt' args mto = smtSolver "minismt" (args++to) minismtFormatter minismtParser
+  where to = maybe [] (\i -> ["-t", show (min 1 i) ]) mto
 
-minismt :: MonadIO m => SolverState Expr -> m (Result (M.Map Var Value))
+minismt :: MonadIO m => Maybe Int -> SolverState Expr -> m (Result (M.Map Var Value))
 minismt = minismt' ["-m", "-v2", "-neg"]
 
 yices' :: MonadIO m => Args -> SolverState Expr -> m (Result (M.Map Var Value))
@@ -50,10 +51,11 @@ yices' args = smtSolver "yices-smt2" args yicesFormatter yicesParser
 yices :: MonadIO m => SolverState Expr -> m (Result (M.Map Var Value))
 yices = yices' []
 
-z3' :: MonadIO m => Args -> SolverState Expr -> m (Result (M.Map Var Value))
-z3' args = smtSolver "z3" args z3Formatter z3Parser
+z3' :: MonadIO m => Args -> Maybe Int -> SolverState Expr -> m (Result (M.Map Var Value))
+z3' args mto = smtSolver "z3" (args++to) z3Formatter z3Parser
+  where to = maybe [] (\i -> ["-T", show (min 1 i) ]) mto
 
-z3 :: MonadIO m => SolverState Expr -> m (Result (M.Map Var Value))
+z3 :: MonadIO m => Maybe Int -> SolverState Expr -> m (Result (M.Map Var Value))
 z3 = z3' ["-smt2", "-in"]
 
 -- | standard polynomial encoding
