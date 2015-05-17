@@ -69,7 +69,9 @@ module Tct.Common.Graph
     , removeNodes
     -- | Removes nodes.
     , removeEdges
-    -- | Removes nodes.
+    -- | Removes edges.
+    , updateLabels
+    -- | Update labels.
 
     -- -- ** Utilities
     -- , pprintCWDGNode
@@ -214,6 +216,8 @@ removeNodes = flip Gr.delNodes
 removeEdges :: Graph nl el -> [(NodeId,NodeId)] -> Graph nl el
 removeEdges = flip Gr.delEdges
 
+updateLabels :: (nl -> ml) -> Graph nl el -> Graph ml el
+updateLabels = Gr.nmap
 
 {-
 ----------------------------------------------------------------------
