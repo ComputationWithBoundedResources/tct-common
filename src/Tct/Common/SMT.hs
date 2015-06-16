@@ -11,7 +11,6 @@ module Tct.Common.SMT
 
 
 import           Control.Monad.Trans        (MonadIO, liftIO)
-import qualified Data.ByteString            as BS
 import           Data.List                  (nub)
 
 import           SLogic.Smt                 as SMT hiding (minismt, minismt', yices, yices', z3, z3')
@@ -35,9 +34,9 @@ instance AdditiveGroup (IExpr v) where
   neg = SMT.neg
 
 
-smtSolver :: MonadIO m => Cmd -> Args -> (t -> BS.ByteString) -> (String -> Result v) -> t -> m (Result v)
+smtSolver :: MonadIO m => Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> m (Result v)
 smtSolver cmd args formatter parser st = do
-  errM <- liftIO $ spawn cmd args (`BS.hPutStr` formatter st)
+  errM <- liftIO $ spawn cmd args (`hPutDiffFormat` formatter st)
   return $ either SMT.Error parser errM
 
 smtSolveTctM :: (Var v, Storing v) => prob -> SmtSolver T.TctM v
