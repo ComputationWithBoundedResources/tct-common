@@ -34,6 +34,9 @@ instance AdditiveGroup (IExpr v) where
   neg = SMT.neg
 
 
+-- TODO: MS: spawns a process and then pipes the input
+-- this seems to be a problem for eg epostar as computing the formula can take its time check if it is better to use
+-- the solver of the SLogic library which use temporary files - install Signal handler for WairForProcess error
 smtSolver :: MonadIO m => Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> m (Result v)
 smtSolver cmd args formatter parser st = do
   errM <- liftIO $ spawn cmd args (`hPutDiffFormat` formatter st)
