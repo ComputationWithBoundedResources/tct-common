@@ -46,7 +46,7 @@ library
     slogic         == 0.*,
     tct-core       == 3.*
   ghc-options:
-    -j -Wall -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
+    -Wall -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
   extensions: 
     ConstraintKinds,
     DataKinds,
