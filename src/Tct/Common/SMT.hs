@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Tct.Common.SMT
   (
   module SMT
@@ -10,7 +11,10 @@ module Tct.Common.SMT
   ) where
 
 
-import qualified Control.Exception as E (bracket)
+import Data.Monoid (mempty)
+import Control.Applicative ((<$>))
+import  Control.Exception (bracket)
+import           Control.Monad.Error (MonadError, throwError)
 import           Control.Monad.Trans        (MonadIO, liftIO)
 import           Data.List                  (nub)
 import           System.Exit
@@ -20,7 +24,7 @@ import           System.Process
 
 import           SLogic.Smt                 as SMT hiding (minismt, minismt', yices, yices', z3, z3')
 
--- import           Tct.Core.Common.Concurrent
+import           Tct.Core.Common.Concurrent
 import qualified Tct.Core.Data              as T
 
 import qualified Tct.Common.Polynomial      as P
@@ -47,8 +51,7 @@ instance AdditiveGroup (IExpr v) where
 --   errM <- liftIO $ spawn cmd args (`hPutDiffFormat` formatter st)
 --   return $ either SMT.Error parser errM
 
-
-smtSolver :: MonadIO m => String -> Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> m (Result v)
+smtSolver :: String -> Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> T.TctM (Result v)
 smtSolver tmp cmd args formatter parser st = do
   let input = formatter st
   liftIO . withFile $ \file hfile -> do
@@ -57,12 +60,8 @@ smtSolver tmp cmd args formatter parser st = do
     hPutDiffFormat hfile input
     hFlush hfile
     hClose hfile
-    (code, stdout, stderr) <- readProcessWithExitCode cmd (args ++ [file]) ""
-    return $ case code of
-      ExitFailure i -> Error $ "Error(" ++ show i ++ "," ++ show stderr ++ ")"
-      ExitSuccess   -> parser stdout
-    where withFile = E.bracket (openTempFile tmp "smt2x") (hClose . snd) . uncurry
-
+    either Error parser <$> spawn' cmd (args ++ [file])
+    where withFile = bracket (openTempFile tmp "smt2x") (hClose . snd) . uncurry
 
 smtSolveTctM :: (Var v, Storing v) => prob -> SmtSolver T.TctM v
 smtSolveTctM p st = do
@@ -73,29 +72,30 @@ smtSolveTctM p st = do
     Just (cmd,args)
       | cmd == "minismt" -> minismt' tmp (nub $ ["-m", "-v2", "-neg"] ++ args) mto  st
       | cmd == "yices"   -> yices' tmp args st
-      | cmd == "z3"      -> z3' tmp (nub $ ["-smt2", "-in"] ++ args) mto st
+      | cmd == "z3"      -> z3' tmp (nub $ ["-smt2"] ++ args) mto st
       | otherwise        -> defl tmp mto
     Nothing -> defl tmp mto
     where defl tmp mto = minismt' tmp ["-m", "-v2", "-neg"] mto st
 
-minismt' :: (MonadIO m, Storing v, Var v) => String -> Args -> Maybe Int -> SmtSolver m v
+minismt' :: (Storing v, Var v) => String -> Args -> Maybe Int -> SmtSolver T.TctM v
 minismt' tmp args mto = smtSolver tmp "minismt" (args++to) minismtFormatter minismtParser
   where to = maybe [] (\i -> ["-t", show (max 1 i) ]) mto
 
-minismt :: (MonadIO m, Storing v, Var v) => String -> Maybe Int -> SmtSolver m v
+minismt :: (Storing v, Var v) => String -> Maybe Int -> SmtSolver T.TctM v
 minismt tmp = minismt' tmp ["-m", "-v2", "-neg"]
 
-yices' :: (MonadIO m, Storing v, Var v) => String -> Args -> SmtSolver m v
+yices' :: (Storing v, Var v) => String -> Args -> SmtSolver T.TctM v
 yices' tmp args = smtSolver tmp "yices-smt2" args yicesFormatter yicesParser
 
-yices :: (MonadIO m, Storing v, Var v) => String -> SmtSolver m v
+yices :: (Storing v, Var v) => String -> SmtSolver T.TctM v
 yices tmp = yices' tmp []
 
-z3' :: (MonadIO m, Storing v, Var v) => String -> Args -> Maybe Int -> SmtSolver m v
+z3' :: (Storing v, Var v) => String -> Args -> Maybe Int -> SmtSolver T.TctM v
 z3' tmp args mto = smtSolver tmp "z3" (args++to) z3Formatter z3Parser
-  where to = maybe [] (\i -> ["-T", show (max 1 i) ]) mto
+  -- where to = maybe [] (\i -> ["-T:"++ show (max 1 i)]) mto
+  where to = maybe [] (\i -> ["-T", show (max 1 i)]) mto
 
-z3 :: (MonadIO m, Storing v, Var v) => String -> Maybe Int -> SmtSolver m v
+z3 :: (Storing v, Var v) => String -> Maybe Int -> SmtSolver T.TctM v
 z3 tmp = z3' tmp ["-smt2", "-in"]
 
 -- | standard polynomial encoding
