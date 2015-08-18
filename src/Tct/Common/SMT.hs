@@ -1,26 +1,24 @@
 {-# LANGUAGE FlexibleContexts #-}
+-- | This module re-exports SLogic.Smt and provides specialised commands for invoking the solver.
 module Tct.Common.SMT
   (
   module SMT
+  , smtSolveTctM
   , minismt, minismt'
   , yices, yices'
   , z3, z3'
-  , smtSolveTctM
   -- encoding
   , encodePoly
   ) where
 
 
-import Data.Monoid (mempty)
-import Control.Applicative ((<$>))
-import  Control.Exception (bracket)
-import           Control.Monad.Error (MonadError, throwError)
+import           Control.Exception          (bracket)
+import           Control.Monad.Error        (throwError)
 import           Control.Monad.Trans        (MonadIO, liftIO)
 import           Data.List                  (nub)
-import           System.Exit
+import           Data.Maybe                 (fromMaybe)
 import           System.IO                  (hClose, hFlush, hSetBinaryMode)
 import           System.IO.Temp             (openTempFile)
-import           System.Process
 
 import           SLogic.Smt                 as SMT hiding (minismt, minismt', yices, yices', z3, z3')
 
@@ -43,60 +41,67 @@ instance AdditiveGroup (IExpr v) where
   neg = SMT.neg
 
 
--- TODO: MS: spawns a process and then pipes the input
--- this seems to be a problem for eg epostar as computing the formula can take its time check if it is better to use
--- the solver of the SLogic library which use temporary files - install Signal handler for WairForProcess error
--- smtSolver :: MonadIO m => Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> m (Result v)
--- smtSolver cmd args formatter parser st = do
---   errM <- liftIO $ spawn cmd args (`hPutDiffFormat` formatter st)
---   return $ either SMT.Error parser errM
+-- | This is the preferred way to invoke a solver in 'TctM'.
+-- Invokes the solver specified in the configuration. Currently "minismt", "z3" and "yices" are supported. If the
+-- solver is undefined then "minismt" is used.
+smtSolveTctM :: (Var v, Storing v) => prob -> SmtSolver T.TctM v
+smtSolveTctM p st = do
+  mso <- T.solver `fmap` T.askState
+  tmp <- T.tempDirectory `fmap` T.askState
+  mto <- T.remainingTime `fmap` T.askStatus p
+  case mso of
+    Just (cmd,args)
+      | cmd == "minismt" -> minismt' (Just tmp) mto (nub $ ["-m", "-v2", "-neg"] ++ args) st
+      | cmd == "z3"      -> z3' (Just tmp) mto (nub $ "-smt2": args) st
+      | cmd == "yices"   -> yices' (Just tmp) args st
+      | otherwise        -> defl tmp mto
+    Nothing -> defl tmp mto
+    where defl tmp mto = minismt' (Just tmp) mto ["-m", "-v2", "-neg"] st
 
-smtSolver :: String -> Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> T.TctM (Result v)
-smtSolver tmp cmd args formatter parser st = do
+gSolver :: MonadIO m => Maybe FilePath -> Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> m (Result v)
+gSolver mtmp cmd args formatter parser st = do
+  let tmp = "tmp" `fromMaybe` mtmp
   let input = formatter st
-  liftIO . withFile $ \file hfile -> do
+  liftIO . withFile tmp $ \file hfile -> do
     hSetBinaryMode hfile True
     -- hSetBuffering hfile BlockBuffering
     hPutDiffFormat hfile input
     hFlush hfile
     hClose hfile
-    either Error parser <$> spawn' cmd (args ++ [file])
-    where withFile = bracket (openTempFile tmp "smt2x") (hClose . snd) . uncurry
+    either (throwError . userError) (return . parser) =<< spawn' cmd (args ++ [file])
+    where withFile tmp = bracket (openTempFile tmp "smt2x") (hClose . snd) . uncurry
 
-smtSolveTctM :: (Var v, Storing v) => prob -> SmtSolver T.TctM v
-smtSolveTctM p st = do
-  mso <- T.solver `fmap` T.askState
-  mto <- T.remainingTime `fmap` T.askStatus p
-  tmp <- T.tempDirectory `fmap` T.askState
-  case mso of
-    Just (cmd,args)
-      | cmd == "minismt" -> minismt' tmp (nub $ ["-m", "-v2", "-neg"] ++ args) mto  st
-      | cmd == "yices"   -> yices' tmp args st
-      | cmd == "z3"      -> z3' tmp (nub $ ["-smt2"] ++ args) mto st
-      | otherwise        -> defl tmp mto
-    Nothing -> defl tmp mto
-    where defl tmp mto = minismt' tmp ["-m", "-v2", "-neg"] mto st
-
-minismt' :: (Storing v, Var v) => String -> Args -> Maybe Int -> SmtSolver T.TctM v
-minismt' tmp args mto = smtSolver tmp "minismt" (args++to) minismtFormatter minismtParser
+-- | minismt solver instance
+minismt' :: (MonadIO m, Storing v, Var v)
+  => Maybe FilePath -- ^ temporary directory
+  -> Maybe Int      -- ^ optional timeout
+  -> Args -> SmtSolver m v
+minismt' mtmp mto args = gSolver mtmp "minismt" (args++to) minismtFormatter minismtParser
   where to = maybe [] (\i -> ["-t", show (max 1 i) ]) mto
 
-minismt :: (Storing v, Var v) => String -> Maybe Int -> SmtSolver T.TctM v
-minismt tmp = minismt' tmp ["-m", "-v2", "-neg"]
+-- | prop> minismt = minismt' Nothing Nothing ["-m", "-v2", "-neg"]
+minismt :: (MonadIO m, Storing v, Var v) => SmtSolver m v
+minismt = minismt' Nothing Nothing ["-m", "-v2", "-neg"]
 
-yices' :: (Storing v, Var v) => String -> Args -> SmtSolver T.TctM v
-yices' tmp args = smtSolver tmp "yices-smt2" args yicesFormatter yicesParser
+-- | yices solver instance
+yices' :: (MonadIO m, Storing v, Var v) => Maybe FilePath -> Args -> SmtSolver m v
+yices' mtmp args = gSolver mtmp "yices-smt2" args yicesFormatter yicesParser
 
-yices :: (Storing v, Var v) => String -> SmtSolver T.TctM v
-yices tmp = yices' tmp []
+-- | prop> yices = yices' Nothing []
+yices :: (MonadIO m, Storing v, Var v) => SmtSolver m v
+yices = yices' Nothing []
 
-z3' :: (Storing v, Var v) => String -> Args -> Maybe Int -> SmtSolver T.TctM v
-z3' tmp args mto = smtSolver tmp "z3" (args++to) z3Formatter z3Parser
-  -- where to = maybe [] (\i -> ["-T:"++ show (max 1 i)]) mto
-  where to = maybe [] (\i -> ["-T", show (max 1 i)]) mto
+-- | z3 solver instance
+z3' :: (MonadIO m, Storing v, Var v)
+  => Maybe FilePath -- ^ temporary directory
+  -> Maybe Int      -- ^ optional timeout
+  -> Args -> SmtSolver m v
+z3' mtmp mto args = gSolver mtmp "z3" (args++to) z3Formatter z3Parser
+  where to = maybe [] (\i -> ["-T:"++ show (max 1 i)]) mto
 
-z3 :: (Storing v, Var v) => String -> Maybe Int -> SmtSolver T.TctM v
-z3 tmp = z3' tmp ["-smt2", "-in"]
+-- | prop> z3 = z3' Nothing Nothing ["smt2"]
+z3 :: (MonadIO m, Storing v, Var v) =>  SmtSolver m v
+z3 = z3' Nothing Nothing ["-smt2"]
 
 -- | standard polynomial encoding
 encodePoly :: Ord v => P.Polynomial Int v -> IExpr v
