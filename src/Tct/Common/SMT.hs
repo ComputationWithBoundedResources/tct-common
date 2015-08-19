@@ -7,6 +7,7 @@ module Tct.Common.SMT
   , minismt, minismt'
   , yices, yices'
   , z3, z3'
+  , minismtArgs, yicesArgs, z3Args
   -- encoding
   , encodePoly
   ) where
@@ -15,7 +16,7 @@ module Tct.Common.SMT
 import           Control.Exception          (bracket)
 import           Control.Monad.Error        (throwError)
 import           Control.Monad.Trans        (MonadIO, liftIO)
-import           Data.List                  (nub)
+import           Data.List                  ((\\))
 import           Data.Maybe                 (fromMaybe)
 import           System.IO                  (hClose, hFlush, hSetBinaryMode)
 import           System.IO.Temp             (openTempFile)
@@ -51,12 +52,19 @@ smtSolveTctM p st = do
   mto <- T.remainingTime `fmap` T.askStatus p
   case mso of
     Just (cmd,args)
-      | cmd == "minismt" -> minismt' (Just tmp) mto (nub $ ["-m", "-v2", "-neg"] ++ args) st
-      | cmd == "z3"      -> z3' (Just tmp) mto (nub $ "-smt2": args) st
-      | cmd == "yices"   -> yices' (Just tmp) args st
-      | otherwise        -> defl tmp mto
+      | cmd == "minismt"    -> minismt' (Just tmp) mto (minismtArgs ++ (args \\ minismtArgs)) st
+      | cmd == "yices"      -> yices'   (Just tmp) args st
+      | cmd == "yices-smt2" -> yices'   (Just tmp) args st
+      | cmd == "z3"         -> z3'      (Just tmp) mto (z3Args ++ (args \\ z3Args)) st
+      | otherwise           -> defl tmp mto
     Nothing -> defl tmp mto
-    where defl tmp mto = minismt' (Just tmp) mto ["-m", "-v2", "-neg"] st
+    where defl tmp mto = minismt' (Just tmp) mto ("-neg" : minismtArgs) st
+
+-- | Default arguments. Needed to get things running.
+minismtArgs, yicesArgs, z3Args :: Args
+minismtArgs = ["-m", "-v2"]
+yicesArgs   = []
+z3Args      = ["-smt2"]
 
 gSolver :: MonadIO m => Maybe FilePath -> Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> m (Result v)
 gSolver mtmp cmd args formatter parser st = do
@@ -79,17 +87,17 @@ minismt' :: (MonadIO m, Storing v, Var v)
 minismt' mtmp mto args = gSolver mtmp "minismt" (args++to) minismtFormatter minismtParser
   where to = maybe [] (\i -> ["-t", show (max 1 i) ]) mto
 
--- | prop> minismt = minismt' Nothing Nothing ["-m", "-v2", "-neg"]
+-- | prop> minismt = minismt' Nothing Nothing minismtArgs
 minismt :: (MonadIO m, Storing v, Var v) => SmtSolver m v
-minismt = minismt' Nothing Nothing ["-m", "-v2", "-neg"]
+minismt = minismt' Nothing Nothing minismtArgs
 
 -- | yices solver instance
 yices' :: (MonadIO m, Storing v, Var v) => Maybe FilePath -> Args -> SmtSolver m v
 yices' mtmp args = gSolver mtmp "yices-smt2" args yicesFormatter yicesParser
 
--- | prop> yices = yices' Nothing []
+-- | prop> yices = yices' Nothing yicesArgs
 yices :: (MonadIO m, Storing v, Var v) => SmtSolver m v
-yices = yices' Nothing []
+yices = yices' Nothing yicesArgs
 
 -- | z3 solver instance
 z3' :: (MonadIO m, Storing v, Var v)
@@ -99,9 +107,9 @@ z3' :: (MonadIO m, Storing v, Var v)
 z3' mtmp mto args = gSolver mtmp "z3" (args++to) z3Formatter z3Parser
   where to = maybe [] (\i -> ["-T:"++ show (max 1 i)]) mto
 
--- | prop> z3 = z3' Nothing Nothing ["smt2"]
+-- | prop> z3 = z3' Nothing Nothing z3Args
 z3 :: (MonadIO m, Storing v, Var v) =>  SmtSolver m v
-z3 = z3' Nothing Nothing ["-smt2"]
+z3 = z3' Nothing Nothing z3Args
 
 -- | standard polynomial encoding
 encodePoly :: Ord v => P.Polynomial Int v -> IExpr v
