@@ -68,7 +68,7 @@ z3Args      = ["-smt2"]
 
 gSolver :: MonadIO m => Maybe FilePath -> Cmd -> Args -> (t -> DiffFormat) -> (String -> Result v) -> t -> m (Result v)
 gSolver mtmp cmd args formatter parser st = do
-  let tmp = "tmp" `fromMaybe` mtmp
+  let tmp = "/tmp" `fromMaybe` mtmp
   let input = formatter st
   liftIO . withFile tmp $ \file hfile -> do
     hSetBinaryMode hfile True
