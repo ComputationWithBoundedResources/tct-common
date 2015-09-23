@@ -27,7 +27,7 @@ certificationProblem complexityInput' complexityProof' =
         proofOrigin = Xml.elt "proofOrigin" [tool]
         tool    = Xml.elt "tool" [name, version]
         name    = Xml.elt "name" [Xml.text "TcT"]
-        version = Xml.elt "version" [Xml.text T.version]
+        version = Xml.elt "version" []
 
 
 complexityInput :: Xml.XmlContent -> Xml.XmlContent -> Xml.XmlContent -> Xml.XmlContent
