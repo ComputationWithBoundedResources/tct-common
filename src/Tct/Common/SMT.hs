@@ -41,23 +41,20 @@ instance Multiplicative (IExpr v) where
 instance AdditiveGroup (IExpr v) where
   neg = SMT.neg
 
-
 -- | This is the preferred way to invoke a solver in 'TctM'.
 -- Invokes the solver specified in the configuration. Currently "minismt", "z3" and "yices" are supported. If the
 -- solver is undefined then "minismt" is used.
 smtSolveTctM :: (Var v, Storing v) => prob -> SmtSolver T.TctM v
 smtSolveTctM p st = do
-  mso <- T.solver `fmap` T.askState
+  mso <- T.getKvPair "solver"
   tmp <- T.tempDirectory `fmap` T.askState
   mto <- T.remainingTime `fmap` T.askStatus p
   case mso of
-    Just (cmd,args)
-      | cmd == "minismt"    -> minismt' (Just tmp) mto (minismtArgs ++ (args \\ minismtArgs)) st
-      | cmd == "yices"      -> yices'   (Just tmp) args st
-      | cmd == "yices-smt2" -> yices'   (Just tmp) args st
-      | cmd == "z3"         -> z3'      (Just tmp) mto (z3Args ++ (args \\ z3Args)) st
-      | otherwise           -> defl tmp mto
-    Nothing -> defl tmp mto
+    ("minismt":args)    -> minismt' (Just tmp) mto (minismtArgs ++ (args \\ minismtArgs)) st
+    ("yices":args)      -> yices'   (Just tmp) args st
+    ("yices-smt2":args) -> yices'   (Just tmp) args st
+    ("z3":args)         -> z3'      (Just tmp) mto (z3Args ++ (args \\ z3Args)) st
+    _                   -> defl tmp mto
     where defl tmp mto = minismt' (Just tmp) mto ("-neg" : minismtArgs) st
 
 -- | Default arguments. Needed to get things running.

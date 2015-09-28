@@ -2,7 +2,6 @@ module Tct.Common.CeTA where
 
 
 import qualified Tct.Core.Common.Xml as Xml
-import qualified Tct.Core.Main as T
 
 
 cetaDocument :: Xml.XmlContent -> Xml.XmlDocument
