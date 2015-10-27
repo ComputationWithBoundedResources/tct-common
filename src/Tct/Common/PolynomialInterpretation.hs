@@ -41,19 +41,16 @@ data Shape
   | Mixed Int
   deriving (Eq, Show, Typeable)
 
-shapeArg :: Argument Required Shape
-shapeArg = arg { argName = "shape" , argDomain = "<shape>" }  `withHelp` (s1:shapes)
+shapeArg :: Argument 'Required Shape
+shapeArg = arg "shape" "<shape>" (help:shapes) parser
   where
-    s1 = "Specifies the shape of the polynomial. <shape> is one of:"
+    help   = "Specifies the shape of the polynomial. <shape> is one of:"
     shapes = map ('*':)  [ show StronglyLinear, show Linear, show Quadratic, "Mixed <nat>"]
-
-instance SParsable i i Shape where
-  parseS = P.choice
-    [ P.symbol (show StronglyLinear) >> return StronglyLinear
-    , P.symbol (show Linear)         >> return Linear
-    , P.symbol (show Quadratic)      >> return Quadratic
-    , P.symbol "Mixed "              >> P.nat >>= return . Mixed ]
-
+    parser = P.choice
+        [ P.symbol (show StronglyLinear) >> return StronglyLinear
+        , P.symbol (show Linear)         >> return Linear
+        , P.symbol (show Quadratic)      >> return Quadratic
+        , P.symbol "Mixed "              >> P.nat >>= return . Mixed ]
 
 -- | The kind of the interpretation.
 data Kind fun
