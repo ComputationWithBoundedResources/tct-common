@@ -14,7 +14,6 @@ module Tct.Common.SMT
 
 
 import           Control.Exception          (bracket)
-import           Control.Monad.Error        (throwError)
 import           Control.Monad.Trans        (MonadIO, liftIO)
 import           Data.List                  ((\\))
 import           Data.Maybe                 (fromMaybe)
@@ -24,6 +23,7 @@ import           System.IO.Temp             (openTempFile)
 import           SLogic.Smt                 as SMT hiding (minismt, minismt', yices, yices', z3, z3')
 
 import           Tct.Core.Common.Concurrent
+import           Tct.Core.Common.Error      (throwError)
 import qualified Tct.Core.Data              as T
 
 import qualified Tct.Common.Polynomial      as P
