@@ -1,5 +1,5 @@
 name:          tct-common
-version:       3.0.0
+version:       3.1.0
 stability:     experimental
 author:
   Martin Avanzini, Andreas Kochesser, Georg Moser, Michael Schaper, Maria Schett
@@ -45,7 +45,7 @@ library
     temporary      == 1.2.0.*,
 
     slogic         == 0.*,
-    tct-core       == 3.0.*
+    tct-core       == 3.1.*
   ghc-options:
     -Wall -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
   extensions: 
