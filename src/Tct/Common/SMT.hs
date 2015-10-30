@@ -73,7 +73,7 @@ gSolver mtmp cmd args formatter parser st = do
     hPutDiffFormat hfile input
     hFlush hfile
     hClose hfile
-    either (throwError . userError) (return . parser) =<< spawn' cmd (args ++ [file])
+    either (throwError . userError) (return . parser) =<< spawn cmd (args ++ [file])
     where withFile tmp = bracket (openTempFile tmp "smt2x") (hClose . snd) . uncurry
 
 -- | minismt solver instance
