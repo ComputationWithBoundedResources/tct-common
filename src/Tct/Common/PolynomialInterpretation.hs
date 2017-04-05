@@ -69,10 +69,8 @@ indeterminates = [SomeIndeterminate 1 .. ]
 type SomePolynomial c = P.Polynomial c SomeIndeterminate
 
 -- | Coefficients of the abstract polynomial.
-data CoefficientVar fun = CoefficientVar
+newtype CoefficientVar fun = CoefficientVar
   { restrict :: Bool                        -- ^ Strictness Annotation.
-  , varfun   :: fun
-  , argpos   :: P.MView SomeIndeterminate
   } deriving (Eq, Ord, Show)
 
 newtype PolyInter fun c = PolyInter 
@@ -87,14 +85,15 @@ instance (SMT.Decode m c a, Additive a, Eq a, Additive c, Eq c) => SMT.Decode m 
 
 mkInterpretation :: Ord fun => Kind fun -> (fun, Int) -> P.PView (CoefficientVar fun) SomeIndeterminate
 mkInterpretation k (f, ar) = case k of
-  (Unrestricted shp) -> fromShape shp (mkCoefficient shp f) vs
+  (Unrestricted shp) -> fromShape shp (mkCoefficient False shp) vs
   (ConstructorBased shp cs) 
-    | f `S.member` cs -> P.linear (CoefficientVar True f) vs
-    | otherwise       -> fromShape shp (mkCoefficient shp f) vs
+    | f `S.member` cs -> P.linear (mkCoefficient True shp) vs
+    | otherwise       -> fromShape shp (mkCoefficient False shp) vs
   where
     vs = take ar indeterminates
 
-    mkCoefficient shp = CoefficientVar (shp == StronglyLinear)
+    mkCoefficient _ _   [] = (CoefficientVar False) -- constant
+    mkCoefficient b shp _  = CoefficientVar (b || shp == StronglyLinear)
     fromShape StronglyLinear = P.linear
     fromShape Linear         = P.linear
     fromShape Quadratic      = P.quadratic
