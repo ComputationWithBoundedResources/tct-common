@@ -20,7 +20,8 @@ import           Data.Maybe                 (fromMaybe)
 import           System.IO                  (hClose, hFlush, hSetBinaryMode)
 import           System.IO.Temp             (openTempFile)
 
-import           SLogic.Smt                 as SMT hiding (minismt, minismt', yices, yices', z3, z3')
+import           SLogic.Smt                 as SMT hiding (minismt, minismt',
+                                                    yices, yices', z3, z3')
 
 import           Tct.Core.Common.Concurrent
 import           Tct.Core.Common.Error      (throwError)
