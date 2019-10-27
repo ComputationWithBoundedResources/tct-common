@@ -14,14 +14,13 @@ module Tct.Common.SMT
 
 
 import           Control.Exception          (bracket)
-import           Control.Monad.Trans        (MonadIO, liftIO)
+import           Control.Monad.Trans        (liftIO)
 import           Data.List                  ((\\))
-import           Data.Maybe                 (fromMaybe)
 import           System.IO                  (hClose, hFlush, hSetBinaryMode)
 import           System.IO.Temp             (openTempFile)
 
-import           SLogic.Smt                 as SMT hiding (minismt, minismt',
-                                                    yices, yices', z3, z3')
+import           SLogic.Smt                 as SMT hiding (minismt, minismt', yices,
+                                                    yices', z3, z3')
 
 import           Tct.Core.Common.Concurrent
 import           Tct.Core.Common.Error      (throwError)
@@ -48,7 +47,6 @@ instance AdditiveGroup (IExpr v) where
 smtSolveTctM :: (Var v, Storing v) => prob -> SmtSolver T.TctM v
 smtSolveTctM p st = do
   mso <- T.getKvPair "solver"
-  tmp <- T.tempDirectory `fmap` T.askState
   mto <- T.remainingTime `fmap` T.askStatus p
   case mso of
     ("minismt":args)    -> minismt' mto (minismtArgs ++ (args \\ minismtArgs)) st
