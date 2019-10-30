@@ -1,15 +1,15 @@
 -- | Some handy combinators for proofs.
 {-# LANGUAGE DeriveFunctor #-}
-module Tct.Common.ProofCombinators 
- ( 
+module Tct.Common.ProofCombinators
+ (
  OrientationProof (..)
  , ApplicationProof (..)
  , ApplicationProofT (..)
  ) where
 
 
-import Control.Monad.Trans
-import Control.Monad
+import           Control.Monad
+import           Control.Monad.Trans
 import qualified Tct.Core.Common.Pretty as PP
 import qualified Tct.Core.Common.Xml    as Xml
 
@@ -20,15 +20,15 @@ data OrientationProof o
   deriving (Show, Functor)
 
 instance PP.Pretty o => PP.Pretty (OrientationProof o) where
-  pretty (Order o)        = PP.pretty o
-  pretty Incompatible     = PP.paragraph "The input can not be schown compatible."
+  pretty (Order o)    = PP.pretty o
+  pretty Incompatible = PP.paragraph "The input can not be shown compatible."
 
 instance Xml.Xml o => Xml.Xml (OrientationProof o) where
-  toXml (Order o)        = Xml.toXml o
-  toXml Incompatible     = Xml.elt "incompatible" []
+  toXml (Order o)    = Xml.toXml o
+  toXml Incompatible = Xml.elt "incompatible" []
 
-  toCeTA (Order o)        = Xml.toCeTA o
-  toCeTA Incompatible     = Xml.unsupported
+  toCeTA (Order o)    = Xml.toCeTA o
+  toCeTA Incompatible = Xml.unsupported
 
 -- | A proof combinator that provides a cut evaluation.
 data ApplicationProof p
