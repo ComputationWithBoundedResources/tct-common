@@ -11,8 +11,8 @@ license-file:  LICENSE
 category:      Program Analysis
 synopsis:      A Complexity Analysis Framework
 description:
-  The Tyrolean Complexity Tool (TcT for short) is a tool for proving 
-  resource bounds for different formal systems. This package provides 
+  The Tyrolean Complexity Tool (TcT for short) is a tool for proving
+  resource bounds for different formal systems. This package provides
   some common functionalities.
 build-type:    Simple
 cabal-version: >= 1.8
@@ -33,20 +33,20 @@ library
     Tct.Common.Ring
     Tct.Common.SMT
   build-depends:
-    base           >= 4.7 && < 5,
-    bytestring,
-    containers,
-    fgl,
-    fgl-visualize,
-    mtl,
-    parsec,
-    temporary,
+    base           == 4.*,
+    bytestring     >= 0.10,
+    containers     >= 0.5,
+    fgl            >= 5.5,
+    fgl-visualize  >= 0.1,
+    mtl            >= 2.1,
+    parsec         >= 3.1,
+    temporary      >= 1.2,
 
-    slogic      >= 0.3,
-    tct-core    >= 3.3
+    slogic         >= 0.0,
+    tct-core       >= 3.2
   ghc-options:
     -Wall -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
-  extensions: 
+  extensions:
     ConstraintKinds,
     DataKinds,
     DeriveDataTypeable,
