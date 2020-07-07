@@ -8,7 +8,6 @@ module Tct.Common.ProofCombinators
  ) where
 
 
-import Control.Applicative
 import Control.Monad.Trans
 import Control.Monad
 import qualified Tct.Core.Common.Pretty as PP
