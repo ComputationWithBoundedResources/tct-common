@@ -1,13 +1,11 @@
 name:          tct-common
-version:       3.2.0
+version:       3.3.0
 stability:     experimental
 author:
   Martin Avanzini, Andreas Kochesser, Georg Moser, Michael Schaper, Maria Schett
 maintainer:
   Martin Avanzini <martin.avanzini@uibk.ac.at>,
-  Andreas Kochesser <andreas.kochesser@uibk.ac.at>,
-  Michael Schaper <michael.schaper@uibk.ac.at>,
-  Maria Schett <maria.schett@uibk.ac.at>
+  Michael Schaper <michael.schaper@student.uibk.ac.at>,
 license:       BSD3
 license-file:  LICENSE
 category:      Program Analysis
@@ -35,17 +33,17 @@ library
     Tct.Common.Ring
     Tct.Common.SMT
   build-depends:
-    base           == 4.*,
-    bytestring     == 0.10.*,
-    containers     >= 0.5 && < 0.6,
-    fgl            == 5.5.*,
-    fgl-visualize  == 0.1.0.*,
-    mtl            >= 2.1 && < 2.3,
-    parsec         == 3.1.*,
-    temporary      == 1.2.0.*,
+    base           >= 4.7 && < 5,
+    bytestring,
+    containers,
+    fgl,
+    fgl-visualize,
+    mtl,
+    parsec,
+    temporary,
 
-    slogic         == 0.*,
-    tct-core       == 3.2.*
+    slogic      >= 0.3,
+    tct-core    >= 3.3
   ghc-options:
     -Wall -fno-warn-orphans -fno-spec-constr-count -rtsopts -with-rtsopts=-N
   extensions: 
