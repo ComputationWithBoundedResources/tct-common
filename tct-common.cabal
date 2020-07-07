@@ -1,13 +1,11 @@
 name:          tct-common
-version:       3.2.0
+version:       3.3.0
 stability:     experimental
 author:
   Martin Avanzini, Andreas Kochesser, Georg Moser, Michael Schaper, Maria Schett
 maintainer:
   Martin Avanzini <martin.avanzini@uibk.ac.at>,
-  Andreas Kochesser <andreas.kochesser@uibk.ac.at>,
-  Michael Schaper <michael.schaper@uibk.ac.at>,
-  Maria Schett <maria.schett@uibk.ac.at>
+  Michael Schaper <michael.schaper@student.uibk.ac.at>,
 license:       BSD3
 license-file:  LICENSE
 category:      Program Analysis
